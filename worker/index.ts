@@ -1,0 +1,242 @@
+import PostalMime from 'postal-mime'
+
+interface Env {
+  ASSETS: Fetcher
+  TMAIL_INBOX: KVNamespace
+  DOMAINS?: string
+}
+
+interface ForwardableEmailMessage {
+  readonly from: string
+  readonly to: string
+  readonly headers: Headers
+  readonly raw: ReadableStream
+  readonly rawSize: number
+  setReject(reason: string): void
+  forward(rcptTo: string, headers?: Headers): Promise<void>
+}
+
+export interface StoredEmail {
+  id: string
+  accountId: string
+  msgid: string
+  from: {
+    address: string
+    name: string
+  }
+  to: Array<{
+    address: string
+    name: string
+  }>
+  subject: string
+  intro: string
+  seen: boolean
+  isDeleted: boolean
+  hasAttachments: boolean
+  size: number
+  downloadUrl: string
+  createdAt: string
+  updatedAt: string
+  text?: string
+  html?: string[]
+}
+
+function corsHeaders() {
+  return {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+  }
+}
+
+function jsonResponse(data: unknown, status = 200) {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: {
+      'Content-Type': 'application/json',
+      ...corsHeaders(),
+    },
+  })
+}
+
+export default {
+  async fetch(request: Request, env: Env): Promise<Response> {
+    const url = new URL(request.url)
+
+    if (request.method === 'OPTIONS') {
+      return new Response(null, { headers: corsHeaders() })
+    }
+
+    // 1. GET /api/domains - Daftar domain aktif milik sendiri
+    if (url.pathname === '/api/domains' && request.method === 'GET') {
+      const domainsList = (env.DOMAINS || 'amailang.my.id,mailian.my.id,otpinn.my.id,tempol.my.id,gaskenn.biz.id')
+        .split(',')
+        .map((d) => d.trim())
+        .filter(Boolean)
+
+      const result = domainsList.map((domain, index) => ({
+        id: `dom-${index}`,
+        domain,
+        isActive: true,
+        isPrivate: false,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      }))
+
+      return jsonResponse(result)
+    }
+
+    // 2. GET /api/messages?address=user@domain.com
+    if (url.pathname === '/api/messages' && request.method === 'GET') {
+      const address = url.searchParams.get('address')?.toLowerCase().trim()
+      if (!address) {
+        return jsonResponse({ error: 'Address parameter required' }, 400)
+      }
+
+      const key = `inbox:${address}`
+      const listRaw = await env.TMAIL_INBOX.get(key)
+      const emails: StoredEmail[] = listRaw ? JSON.parse(listRaw) : []
+
+      // Kembalikan ringkasan message sesuai interface Hydra Mail.tm
+      const summaryList = emails.map((m) => {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { text, html, ...rest } = m
+        return rest
+      })
+
+      return jsonResponse({
+        'hydra:member': summaryList,
+        'hydra:totalItems': summaryList.length,
+      })
+    }
+
+    // 3. GET /api/messages/:id?address=user@domain.com
+    if (url.pathname.startsWith('/api/messages/') && request.method === 'GET') {
+      const messageId = url.pathname.replace('/api/messages/', '')
+      const address = url.searchParams.get('address')?.toLowerCase().trim()
+      if (!address) {
+        return jsonResponse({ error: 'Address parameter required' }, 400)
+      }
+
+      const key = `inbox:${address}`
+      const listRaw = await env.TMAIL_INBOX.get(key)
+      const emails: StoredEmail[] = listRaw ? JSON.parse(listRaw) : []
+      const found = emails.find((m) => m.id === messageId)
+
+      if (!found) {
+        return jsonResponse({ error: 'Message not found' }, 404)
+      }
+
+      // Tandai pesan sudah dibaca (seen)
+      if (!found.seen) {
+        found.seen = true
+        await env.TMAIL_INBOX.put(key, JSON.stringify(emails), {
+          expirationTtl: 86400 * 3, // simpan 3 hari
+        })
+      }
+
+      return jsonResponse(found)
+    }
+
+    // 4. DELETE /api/messages/:id?address=user@domain.com
+    if (url.pathname.startsWith('/api/messages/') && request.method === 'DELETE') {
+      const messageId = url.pathname.replace('/api/messages/', '')
+      const address = url.searchParams.get('address')?.toLowerCase().trim()
+      if (!address) {
+        return jsonResponse({ error: 'Address parameter required' }, 400)
+      }
+
+      const key = `inbox:${address}`
+      const listRaw = await env.TMAIL_INBOX.get(key)
+      if (listRaw) {
+        let emails: StoredEmail[] = JSON.parse(listRaw)
+        emails = emails.filter((m) => m.id !== messageId)
+        await env.TMAIL_INBOX.put(key, JSON.stringify(emails), {
+          expirationTtl: 86400 * 3,
+        })
+      }
+
+      return new Response(null, { status: 204, headers: corsHeaders() })
+    }
+
+    // Fallback: Serve SPA static frontend
+    return env.ASSETS.fetch(request)
+  },
+
+  // Handler penerimaan email dari Cloudflare Email Routing
+  async email(message: ForwardableEmailMessage, env: Env): Promise<void> {
+    const toAddress = message.to.toLowerCase().trim()
+    const fromAddress = message.from
+
+    // Stream raw email ke memory buffer
+    const rawData = await new Response(message.raw).arrayBuffer()
+
+    // Parse email MIME menggunakan postal-mime
+    const parser = new PostalMime()
+    const parsed = await parser.parse(rawData)
+
+    const messageId = `msg_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`
+    const intro = parsed.text
+      ? parsed.text.slice(0, 120).replace(/\s+/g, ' ').trim()
+      : (parsed.subject || 'New Message')
+
+    // Bersihkan nama & alamat pengirim agar ramah dibaca (bukan raw bounce SES hash)
+    const rawSenderAddress = parsed.from?.address || fromAddress
+    let senderName = parsed.from?.name?.trim() || ''
+
+    if (!senderName || /^[0-9a-fA-F-]{16,}@/.test(senderName) || senderName === rawSenderAddress) {
+      // Ambil domain pengirim sebagai nama brand (misal sendtestmail.com -> SendTestMail)
+      const domain = rawSenderAddress.split('@')[1] || ''
+      if (domain && !domain.includes('bounce') && !domain.includes('out.')) {
+        const brand = domain.split('.')[0]
+        senderName = brand.charAt(0).toUpperCase() + brand.slice(1)
+      } else if (rawSenderAddress.includes('sendtestmail.com')) {
+        senderName = 'SendTestMail'
+      } else {
+        senderName = rawSenderAddress.split('@')[0] || 'Unknown Sender'
+      }
+    }
+
+    const newEmail: StoredEmail = {
+      id: messageId,
+      accountId: toAddress,
+      msgid: messageId,
+      from: {
+        address: rawSenderAddress,
+        name: senderName,
+      },
+      to: [
+        {
+          address: toAddress,
+          name: toAddress.split('@')[0],
+        },
+      ],
+      subject: parsed.subject || '(No Subject)',
+      intro: intro,
+      seen: false,
+      isDeleted: false,
+      hasAttachments: (parsed.attachments && parsed.attachments.length > 0) || false,
+      size: message.rawSize,
+      downloadUrl: '',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      text: parsed.text || '',
+      html: parsed.html ? [parsed.html] : undefined,
+    }
+
+    const key = `inbox:${toAddress}`
+    const listRaw = await env.TMAIL_INBOX.get(key)
+    const currentEmails: StoredEmail[] = listRaw ? JSON.parse(listRaw) : []
+
+    // Tambahkan di paling atas, batasi max 50 email per alamat
+    currentEmails.unshift(newEmail)
+    if (currentEmails.length > 50) currentEmails.length = 50
+
+    // Simpan ke Cloudflare KV dengan TTL 3 hari (259200 detik)
+    await env.TMAIL_INBOX.put(key, JSON.stringify(currentEmails), {
+      expirationTtl: 259200,
+    })
+
+    console.log(`[TMail Saved] Message ${messageId} saved for ${toAddress}`)
+  },
+}
