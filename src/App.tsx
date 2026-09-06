@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Header } from './components/Header'
+import { DisclaimerAlert } from './components/DisclaimerAlert'
 import { EmailHero } from './components/EmailHero'
 import { MessageList } from './components/MessageList'
 import { MessageModal } from './components/MessageModal'
@@ -47,6 +48,9 @@ export function App() {
           theme={theme}
           onToggleTheme={toggleTheme}
         />
+
+        {/* Floating Warning Alert (Untitled UI Style) */}
+        <DisclaimerAlert />
 
         {error && (
           <div className="mb-6 p-4 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200/80 dark:border-rose-900/50 text-rose-700 dark:text-rose-400 text-sm flex items-center gap-3">
