@@ -110,7 +110,17 @@ export function App() {
       </div>
 
       <footer className="py-6 text-center text-xs text-slate-400 dark:text-slate-500 border-t border-slate-200/60 dark:border-slate-800/80 mt-8">
-        <p>Minimalist Free TMail Web • Autonomous Edge Mailbox on Cloudflare Workers & KV</p>
+        <p>
+          Website tempmail gratis untuk kebutuhan digital dan di developing oleh{' '}
+          <a
+            href="https://t.me/aztors"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 underline underline-offset-2 transition-colors"
+          >
+            @aztors
+          </a>
+        </p>
       </footer>
 
       <MessageModal
