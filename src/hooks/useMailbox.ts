@@ -2,17 +2,21 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import {
   type MailAccount,
   type MessageItem,
-  fetchAvailableDomain,
+  type RateLimitStatus,
+  createRandomAccountApi,
   createAccount,
+  createCustomAccountApi,
   getToken,
   getMessages,
   deleteMessage,
-  generateRandomCreds,
+  fetchRateLimitStatus,
+  deleteEntireMailboxApi,
 } from '../services/mailApi'
 import { playDingSound } from '../utils/sound'
 
 const STORAGE_KEY = 'tmail_session_v1'
 const POLLING_INTERVAL_SEC = 6
+const COOLDOWN_SECONDS = 4
 
 export function useMailbox() {
   const [account, setAccount] = useState<MailAccount | null>(() => {
@@ -32,6 +36,18 @@ export function useMailbox() {
   const [lastChecked, setLastChecked] = useState<Date | null>(null)
   const [countdown, setCountdown] = useState(POLLING_INTERVAL_SEC)
   const [toastMessage, setToastMessage] = useState<string | null>(null)
+
+  const [rateLimit, setRateLimit] = useState<RateLimitStatus>({
+    limit: 100,
+    count: 0,
+    remaining: 100,
+    resetTimestamp: Date.now() + 3600 * 1000,
+  })
+  const [isLimitReached, setIsLimitReached] = useState(false)
+
+  // Cooldown states (seconds remaining)
+  const [newCooldown, setNewCooldown] = useState(0)
+  const [refreshCooldown, setRefreshCooldown] = useState(0)
 
   const isMounted = useRef(true)
   const prevMessagesCount = useRef(0)
@@ -53,6 +69,34 @@ export function useMailbox() {
     }
   }, [showToast])
 
+  // Poll / sync rate limit status on mount and after mailbox changes
+  const refreshRateLimit = useCallback(async () => {
+    try {
+      const status = await fetchRateLimitStatus()
+      if (isMounted.current) {
+        setRateLimit(status)
+        if (status.remaining <= 0) {
+          setIsLimitReached(true)
+        }
+      }
+    } catch {
+      // ignore
+    }
+  }, [])
+
+  useEffect(() => {
+    refreshRateLimit()
+  }, [refreshRateLimit])
+
+  // Cooldown timer ticks
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setNewCooldown((prev) => (prev > 0 ? prev - 1 : 0))
+      setRefreshCooldown((prev) => (prev > 0 ? prev - 1 : 0))
+    }, 1000)
+    return () => clearInterval(timer)
+  }, [])
+
   useEffect(() => {
     isMounted.current = true
     return () => {
@@ -61,17 +105,19 @@ export function useMailbox() {
   }, [])
 
   const initNewAccount = useCallback(async (autoCopy = false) => {
+    if (newCooldown > 0 || isGeneratingAccount) return
     setIsGeneratingAccount(true)
     setError(null)
+    setNewCooldown(COOLDOWN_SECONDS)
+
     try {
-      const domain = await fetchAvailableDomain()
-      const { address, password } = generateRandomCreds(domain)
-      const acc = await createAccount(address, password)
-      const token = await getToken(address, password)
+      const acc = await createRandomAccountApi()
+      const password = `Tmp!${Math.random().toString(36).slice(-8)}`
+      const token = await getToken(acc.address, password)
 
       const session: MailAccount = {
         id: acc.id,
-        address,
+        address: acc.address,
         password,
         token,
       }
@@ -82,29 +128,48 @@ export function useMailbox() {
         setMessages([])
         prevMessagesCount.current = 0
         setCountdown(POLLING_INTERVAL_SEC)
+        if (typeof acc.remaining === 'number') {
+          setRateLimit((prev) => ({
+            ...prev,
+            remaining: acc.remaining as number,
+            count: prev.limit - (acc.remaining as number),
+          }))
+          if (acc.remaining <= 0) setIsLimitReached(true)
+        }
       }
 
       if (autoCopy) {
-        await copyToClipboard(address)
+        await copyToClipboard(acc.address)
       }
     } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Gagal membuat akun'
+      if (msg.includes('Batas harian') || msg.includes('quota exceeded')) {
+        setIsLimitReached(true)
+        setRateLimit((prev) => ({ ...prev, remaining: 0, count: prev.limit }))
+      }
       if (isMounted.current) {
-        setError(err instanceof Error ? err.message : 'Gagal membuat akun')
+        setError(msg)
       }
     } finally {
       if (isMounted.current) {
         setIsGeneratingAccount(false)
       }
     }
-  }, [copyToClipboard])
+  }, [newCooldown, isGeneratingAccount, copyToClipboard])
 
-  const createCustomAccount = useCallback(async (username: string, domain: string) => {
+  const createCustomAccount = useCallback(async (username: string, domain: string, turnstileToken?: string) => {
     setIsGeneratingAccount(true)
     setError(null)
     try {
       const address = `${username}@${domain}`
       const password = `Tmp!${Math.random().toString(36).slice(-8)}`
-      const acc = await createAccount(address, password)
+
+      let acc: { id: string; address: string; remaining?: number }
+      if (turnstileToken) {
+        acc = await createCustomAccountApi(username, domain, turnstileToken)
+      } else {
+        acc = await createAccount(address, password)
+      }
       const token = await getToken(address, password)
 
       const session: MailAccount = {
@@ -120,12 +185,24 @@ export function useMailbox() {
         setMessages([])
         prevMessagesCount.current = 0
         setCountdown(POLLING_INTERVAL_SEC)
+        if (typeof acc.remaining === 'number') {
+          setRateLimit((prev) => ({
+            ...prev,
+            remaining: acc.remaining as number,
+            count: prev.limit - (acc.remaining as number),
+          }))
+          if (acc.remaining <= 0) setIsLimitReached(true)
+        }
       }
 
       await copyToClipboard(address)
       return true
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Gagal membuat custom email'
+      if (msg.includes('Batas harian') || msg.includes('quota exceeded')) {
+        setIsLimitReached(true)
+        setRateLimit((prev) => ({ ...prev, remaining: 0, count: prev.limit }))
+      }
       if (isMounted.current) {
         setError(msg)
       }
@@ -144,22 +221,31 @@ export function useMailbox() {
   }, [account?.address, createCustomAccount])
 
   const deleteCurrentMailbox = useCallback(async () => {
+    const prevAddress = account?.address
     localStorage.removeItem(STORAGE_KEY)
     setAccount(null)
     setMessages([])
     prevMessagesCount.current = 0
-    showToast('Mailbox deleted. Generating new...')
+
+    if (prevAddress) {
+      deleteEntireMailboxApi(prevAddress).catch(() => {})
+    }
+
+    showToast('Mailbox berhasil dihapus')
     await initNewAccount(true)
-  }, [initNewAccount, showToast])
+  }, [account?.address, initNewAccount, showToast])
 
   const fetchInbox = useCallback(async (silent = false) => {
     if (!account?.address) return
-    if (!silent) setIsLoadingMessages(true)
+    if (!silent) {
+      if (refreshCooldown > 0 || isLoadingMessages) return
+      setIsLoadingMessages(true)
+      setRefreshCooldown(COOLDOWN_SECONDS)
+    }
 
     try {
       const list = await getMessages(account.token, account.address)
       if (isMounted.current) {
-        // Ding jika ada email baru (bukan load pertama)
         if (!isFirstLoad.current && list.length > prevMessagesCount.current) {
           playDingSound()
           showToast(`New email received (${list.length - prevMessagesCount.current})`)
@@ -180,14 +266,14 @@ export function useMailbox() {
         setIsLoadingMessages(false)
       }
     }
-  }, [account?.address, account?.token, showToast])
+  }, [account?.address, account?.token, refreshCooldown, isLoadingMessages, showToast])
 
   // Handle first load init
   useEffect(() => {
     if (!account) {
       initNewAccount()
     } else {
-      fetchInbox()
+      fetchInbox(true)
     }
   }, [account, initNewAccount, fetchInbox])
 
@@ -211,8 +297,8 @@ export function useMailbox() {
   const removeMessage = useCallback(async (id: string) => {
     if (!account?.address) return
     await deleteMessage(account.token, id, account.address)
-    setMessages(prev => {
-      const next = prev.filter(m => m.id !== id)
+    setMessages((prev) => {
+      const next = prev.filter((m) => m.id !== id)
       prevMessagesCount.current = next.length
       return next
     })
@@ -223,6 +309,10 @@ export function useMailbox() {
     messages,
     isLoadingMessages,
     isGeneratingAccount,
+    isLimitReached,
+    rateLimit,
+    newCooldown,
+    refreshCooldown,
     error,
     lastChecked,
     countdown,
@@ -234,5 +324,6 @@ export function useMailbox() {
     deleteCurrentMailbox,
     removeMessage,
     showToast,
+    resetLimitWarning: () => setIsLimitReached(false),
   }
 }

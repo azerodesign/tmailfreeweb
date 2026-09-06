@@ -1,10 +1,14 @@
 import { useState } from 'react'
 import { Header } from './components/Header'
 import { DisclaimerAlert } from './components/DisclaimerAlert'
+import { WelcomeModal } from './components/WelcomeModal'
 import { EmailHero } from './components/EmailHero'
 import { MessageList } from './components/MessageList'
 import { MessageModal } from './components/MessageModal'
 import { CustomEmailModal } from './components/CustomEmailModal'
+import { ApiDocsModal } from './components/ApiDocsModal'
+import { QuotaLimitModal } from './components/QuotaLimitModal'
+import { DeleteConfirmModal } from './components/DeleteConfirmModal'
 import { useMailbox } from './hooks/useMailbox'
 import { useTheme } from './hooks/useTheme'
 import type { MessageItem } from './services/mailApi'
@@ -17,6 +21,10 @@ export function App() {
     messages,
     isLoadingMessages,
     isGeneratingAccount,
+    isLimitReached,
+    rateLimit,
+    newCooldown,
+    refreshCooldown,
     error,
     lastChecked,
     countdown,
@@ -27,10 +35,18 @@ export function App() {
     switchDomain,
     deleteCurrentMailbox,
     removeMessage,
+    resetLimitWarning,
   } = useMailbox()
 
   const [selectedMessage, setSelectedMessage] = useState<MessageItem | null>(null)
   const [isCustomModalOpen, setIsCustomModalOpen] = useState(false)
+  const [isApiDocsOpen, setIsApiDocsOpen] = useState(false)
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
+
+  const handleConfirmDelete = async () => {
+    setIsDeleteModalOpen(false)
+    await deleteCurrentMailbox()
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col justify-between selection:bg-indigo-100 dark:selection:bg-indigo-900/50 selection:text-indigo-700 dark:selection:text-indigo-300 relative transition-colors duration-200">
@@ -47,6 +63,7 @@ export function App() {
           isPolling={isLoadingMessages}
           theme={theme}
           onToggleTheme={toggleTheme}
+          onOpenApiDocs={() => setIsApiDocsOpen(true)}
         />
 
         {/* Floating Warning Alert (Untitled UI Style) */}
@@ -67,18 +84,22 @@ export function App() {
               email={account?.address || null}
               isGenerating={isGeneratingAccount}
               isFetching={isLoadingMessages}
+              isLimitReached={isLimitReached}
+              rateLimit={rateLimit}
+              newCooldown={newCooldown}
+              refreshCooldown={refreshCooldown}
               countdown={countdown}
               onRefresh={fetchInbox}
               onGenerateNew={initNewAccount}
               onOpenCustom={() => setIsCustomModalOpen(true)}
               onSelectDomain={switchDomain}
-              onDeleteMailbox={deleteCurrentMailbox}
+              onOpenDeleteConfirm={() => setIsDeleteModalOpen(true)}
               lastChecked={lastChecked}
             />
           </div>
 
           {/* Right Column (7 cols): Inbox Messages & Content */}
-          <div className="lg:col-span-7 flex flex-col min-h-[420px]">
+          <div className="lg:col-span-7 flex flex-col min-h-105">
             <MessageList
               messages={messages}
               isLoading={isLoadingMessages}
@@ -104,6 +125,31 @@ export function App() {
         isOpen={isCustomModalOpen}
         onClose={() => setIsCustomModalOpen(false)}
         onSubmit={createCustomAccount}
+        isLimitReached={isLimitReached}
+      />
+
+      {/* Delete Confirmation Modal */}
+      <DeleteConfirmModal
+        isOpen={isDeleteModalOpen}
+        address={account?.address || null}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onConfirm={handleConfirmDelete}
+        isDeleting={isGeneratingAccount}
+      />
+
+      {/* Onboarding Welcome Modal */}
+      <WelcomeModal />
+
+      {/* Developer API Documentation Modal */}
+      <ApiDocsModal
+        isOpen={isApiDocsOpen}
+        onClose={() => setIsApiDocsOpen(false)}
+      />
+
+      {/* Daily Quota Limit Warning Modal */}
+      <QuotaLimitModal
+        isOpen={isLimitReached}
+        onClose={resetLimitWarning}
       />
     </div>
   )

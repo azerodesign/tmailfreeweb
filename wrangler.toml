@@ -11,8 +11,14 @@ binding = "ASSETS"
 binding = "TMAIL_INBOX"
 id = "4e97f90248214ed087c0a3b43b40ee0c"
 
+[[d1_databases]]
+binding = "DB"
+database_name = "tmail-db"
+database_id = "d3dccd51-b622-46ba-9fff-1fe829daa6d6"
+
 [observability]
 enabled = true
 
 [vars]
 DOMAINS = "amailang.my.id,mailian.my.id,otpinn.my.id,tempol.my.id,gaskenn.biz.id"
+TURNSTILE_SECRET_KEY = "0x4AAAAAAEpy2eoGspST9wqWS3m5NjJtXlQ"

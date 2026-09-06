@@ -79,7 +79,7 @@ export const MessageList: React.FC<MessageListProps> = ({
           </p>
         </div>
       ) : (
-        <div className="divide-y divide-slate-100 dark:divide-slate-800/80 overflow-y-auto max-h-[600px] lg:max-h-none flex-1">
+        <div className="divide-y divide-slate-100 dark:divide-slate-800/80 overflow-y-auto max-h-150 lg:max-h-none flex-1">
           {messages.map((msg) => {
             const sender = parseSender(msg.from)
             const otp = extractOtpCode(msg.subject, msg.intro)

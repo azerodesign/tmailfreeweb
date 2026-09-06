@@ -79,7 +79,120 @@ export async function fetchAvailableDomain(): Promise<string> {
   return random ? random.domain : DEFAULT_DOMAINS[0]
 }
 
-// Inisialisasi akun lokal (tanpa perlu hit API eksternal)
+export interface RateLimitStatus {
+  limit: number
+  count: number
+  remaining: number
+  resetTimestamp: number
+}
+
+// Check status sisa kuota harian (Web IP)
+export async function fetchRateLimitStatus(): Promise<RateLimitStatus> {
+  try {
+    const res = await fetch('/api/rate-limit')
+    if (res.ok) {
+      return res.json()
+    }
+    const rem = res.headers.get('X-RateLimit-Remaining')
+    return {
+      limit: 100,
+      count: rem !== null ? 100 - parseInt(rem, 10) : 0,
+      remaining: rem !== null ? parseInt(rem, 10) : 100,
+      resetTimestamp: Date.now() + 3600 * 1000,
+    }
+  } catch {
+    return { limit: 100, count: 0, remaining: 100, resetTimestamp: Date.now() }
+  }
+}
+
+// Hapus seluruh mailbox di backend
+export async function deleteEntireMailboxApi(address: string): Promise<boolean> {
+  try {
+    const res = await fetch(`/api/mailbox?address=${encodeURIComponent(address)}`, {
+      method: 'DELETE',
+    })
+    return res.ok
+  } catch {
+    return false
+  }
+}
+
+// Inisialisasi akun custom dengan validasi Turnstile di Worker
+export async function createCustomAccountApi(
+  username: string,
+  domain: string,
+  turnstileToken: string
+): Promise<{ id: string; address: string; remaining?: number }> {
+  const res = await fetch('/api/accounts/verify-custom', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username, domain, turnstileToken }),
+  })
+
+  if (res.status === 429) {
+    const data = await res.json().catch(() => ({}))
+    throw new Error(data.message || 'Batas harian 100 generate email telah tercapai. Reset 00:00 UTC.')
+  }
+
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}))
+    throw new Error(data.error || 'Verifikasi Turnstile gagal. Silakan coba lagi.')
+  }
+
+  const remainingHeader = res.headers.get('X-RateLimit-Remaining')
+  const result = await res.json()
+  return {
+    id: result.address,
+    address: result.address,
+    remaining: remainingHeader !== null ? parseInt(remainingHeader, 10) : undefined,
+  }
+}
+
+// Inisialisasi akun random via backend dengan rate limiting
+export async function createRandomAccountApi(): Promise<{ id: string; address: string; remaining?: number }> {
+  const res = await fetch('/api/accounts/create-random', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+  })
+
+  if (res.status === 429) {
+    const data = await res.json().catch(() => ({}))
+    throw new Error(data.message || 'Batas harian 100 generate email telah tercapai. Reset 00:00 UTC.')
+  }
+
+  if (!res.ok) {
+    throw new Error('Gagal generate email baru.')
+  }
+
+  const remainingHeader = res.headers.get('X-RateLimit-Remaining')
+  const result = await res.json()
+  return {
+    id: result.address,
+    address: result.address,
+    remaining: remainingHeader !== null ? parseInt(remainingHeader, 10) : undefined,
+  }
+}
+
+// Endpoint membuat Developer API Key
+export async function createApiKeyApi(
+  name: string,
+  turnstileToken: string
+): Promise<{ apiKey: string; name: string; limit: number; createdAt: string }> {
+  const res = await fetch('/api/v1/keys/create', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, turnstileToken }),
+  })
+
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}))
+    throw new Error(data.error || 'Gagal membuat Developer API Key')
+  }
+
+  return res.json()
+}
+
+// Inisialisasi akun lokal (fallback)
 export async function createAccount(address: string, _password?: string): Promise<{ id: string; address: string }> {
   return { id: address, address }
 }

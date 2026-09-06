@@ -1,17 +1,21 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { Copy, Check, RefreshCw, PlusCircle, Loader2, Sparkles, Trash2, Globe, ChevronDown } from 'lucide-react'
-import { fetchActiveDomains, type DomainItem } from '../services/mailApi'
+import { Copy, Check, RefreshCw, PlusCircle, Loader2, Sparkles, Trash2, Globe, ChevronDown, Gauge } from 'lucide-react'
+import { fetchActiveDomains, type DomainItem, type RateLimitStatus } from '../services/mailApi'
 
 interface EmailHeroProps {
   email: string | null
   isGenerating: boolean
   isFetching: boolean
+  isLimitReached?: boolean
+  rateLimit?: RateLimitStatus
+  newCooldown?: number
+  refreshCooldown?: number
   countdown: number
   onRefresh: () => void
   onGenerateNew: () => void
   onOpenCustom: () => void
   onSelectDomain: (domain: string) => void
-  onDeleteMailbox: () => void
+  onOpenDeleteConfirm: () => void
   lastChecked: Date | null
 }
 
@@ -19,12 +23,16 @@ export const EmailHero: React.FC<EmailHeroProps> = ({
   email,
   isGenerating,
   isFetching,
+  isLimitReached,
+  rateLimit,
+  newCooldown = 0,
+  refreshCooldown = 0,
   countdown,
   onRefresh,
   onGenerateNew,
   onOpenCustom,
   onSelectDomain,
-  onDeleteMailbox,
+  onOpenDeleteConfirm,
   lastChecked,
 }) => {
   const [copied, setCopied] = useState(false)
@@ -33,6 +41,19 @@ export const EmailHero: React.FC<EmailHeroProps> = ({
   const dropdownRef = useRef<HTMLDivElement>(null)
 
   const currentDomain = email ? email.split('@')[1] || '' : ''
+  const remaining = rateLimit ? rateLimit.remaining : 100
+  const limit = rateLimit ? rateLimit.limit : 100
+
+  // Badge styling based on remaining quota
+  const getQuotaBadgeStyle = () => {
+    if (remaining <= 0 || isLimitReached) {
+      return 'bg-rose-50 dark:bg-rose-950/60 border-rose-200 dark:border-rose-900/50 text-rose-600 dark:text-rose-400'
+    }
+    if (remaining < 20) {
+      return 'bg-amber-50 dark:bg-amber-950/60 border-amber-200 dark:border-amber-900/50 text-amber-700 dark:text-amber-400'
+    }
+    return 'bg-slate-50 dark:bg-slate-800/80 border-slate-200/60 dark:border-slate-700/60 text-slate-600 dark:text-slate-400'
+  }
 
   useEffect(() => {
     fetchActiveDomains().then(setDomains)
@@ -76,7 +97,18 @@ export const EmailHero: React.FC<EmailHeroProps> = ({
             </span>
             <h2 className="text-base sm:text-lg font-semibold text-slate-800 dark:text-white">Your Mailbox Ready</h2>
           </div>
-          <div className="flex items-center gap-2 text-xs text-slate-400 font-medium">
+          <div className="flex items-center gap-2 text-xs font-medium flex-wrap">
+            {/* Daily Quota Indicator Badge */}
+            <div
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[11px] font-medium transition-colors ${getQuotaBadgeStyle()}`}
+              title="Daily generation quota per IP (resets 00:00 UTC)"
+            >
+              <Gauge className="w-3.5 h-3.5 shrink-0" />
+              <span>
+                Daily Quota: <strong className="font-semibold">{remaining}</strong>/{limit}
+              </span>
+            </div>
+
             <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-800/80 border border-slate-200/60 dark:border-slate-700/60 px-2.5 py-1 rounded-full text-slate-500 dark:text-slate-400">
               <span className="relative flex h-2 w-2">
                 <span className={`absolute inline-flex h-full w-full rounded-full bg-emerald-400 ${isFetching ? 'animate-ping' : ''}`}></span>
@@ -91,6 +123,14 @@ export const EmailHero: React.FC<EmailHeroProps> = ({
             )}
           </div>
         </div>
+
+        {/* Quota warning banner when limit reached */}
+        {isLimitReached && (
+          <div className="mb-3.5 p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/50 text-rose-700 dark:text-rose-300 text-xs font-medium flex items-center justify-between gap-2 animate-in fade-in duration-150">
+            <span>Batas 100 email harian tercapai. Reset jam 00:00 UTC.</span>
+            <span className="font-mono text-[11px] opacity-80 shrink-0">0/{limit}</span>
+          </div>
+        )}
 
         {/* Row 1: Email Address Input + Copy Button */}
         <div className="flex flex-col sm:flex-row items-stretch gap-2.5 mb-3.5">
@@ -131,24 +171,40 @@ export const EmailHero: React.FC<EmailHeroProps> = ({
       {/* Row 2: Actions Toolbar */}
       <div className="flex items-center justify-between gap-2 flex-wrap pt-3 border-t border-slate-100 dark:border-slate-800/80 mt-1">
         <div className="flex items-center gap-2 flex-wrap">
+          {/* Refresh button with cooldown & spinner */}
           <button
             onClick={onRefresh}
-            disabled={isFetching || isGenerating}
-            title="Refresh inbox"
+            disabled={isFetching || isGenerating || refreshCooldown > 0}
+            title={refreshCooldown > 0 ? `Tunggu ${refreshCooldown}s` : 'Refresh inbox'}
             className="h-9 px-3 bg-white dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700/80 hover:bg-slate-50 dark:hover:bg-slate-700/60 active:bg-slate-100 text-slate-700 dark:text-slate-300 text-xs font-medium rounded-xl flex items-center justify-center gap-1.5 shadow-xs transition-colors cursor-pointer disabled:opacity-50"
           >
-            <RefreshCw className={`w-3.5 h-3.5 text-slate-500 dark:text-slate-400 ${isFetching ? 'animate-spin' : ''}`} />
-            <span>Refresh</span>
+            {isFetching ? (
+              <Loader2 className="w-3.5 h-3.5 text-indigo-500 animate-spin" />
+            ) : (
+              <RefreshCw className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
+            )}
+            <span>{refreshCooldown > 0 ? `Wait ${refreshCooldown}s` : 'Refresh'}</span>
           </button>
 
+          {/* New Mailbox button with cooldown & spinner */}
           <button
             onClick={onGenerateNew}
-            disabled={isGenerating}
-            title="Change random email address"
+            disabled={isGenerating || isLimitReached || newCooldown > 0}
+            title={
+              isLimitReached
+                ? 'Daily quota limit reached (100/100)'
+                : newCooldown > 0
+                ? `Tunggu ${newCooldown}s`
+                : 'Change random email address'
+            }
             className="h-9 px-3 bg-white dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700/80 hover:bg-slate-50 dark:hover:bg-slate-700/60 text-slate-700 dark:text-slate-300 text-xs font-medium rounded-xl flex items-center justify-center gap-1.5 shadow-xs transition-colors cursor-pointer disabled:opacity-50"
           >
-            <PlusCircle className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
-            <span>New</span>
+            {isGenerating ? (
+              <Loader2 className="w-3.5 h-3.5 text-indigo-500 animate-spin" />
+            ) : (
+              <PlusCircle className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
+            )}
+            <span>{newCooldown > 0 ? `Wait ${newCooldown}s` : 'New'}</span>
           </button>
 
           {/* Change Domain Dropdown Button */}
@@ -199,8 +255,8 @@ export const EmailHero: React.FC<EmailHeroProps> = ({
 
           <button
             onClick={onOpenCustom}
-            disabled={isGenerating}
-            title="Create custom email address"
+            disabled={isGenerating || isLimitReached}
+            title={isLimitReached ? 'Daily quota limit reached' : 'Create custom email address'}
             className="h-9 px-3 bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200/80 dark:border-indigo-800/50 hover:bg-indigo-100/70 dark:hover:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 text-xs font-semibold rounded-xl flex items-center justify-center gap-1.5 shadow-xs transition-colors cursor-pointer disabled:opacity-50"
           >
             <Sparkles className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
@@ -208,8 +264,9 @@ export const EmailHero: React.FC<EmailHeroProps> = ({
           </button>
         </div>
 
+        {/* Delete Mailbox Button -> Triggers DeleteConfirmModal */}
         <button
-          onClick={onDeleteMailbox}
+          onClick={onOpenDeleteConfirm}
           disabled={isGenerating}
           title="Delete current mailbox & create fresh one"
           className="h-9 px-2.5 bg-white dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700/80 hover:border-rose-200 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-slate-400 hover:text-rose-600 text-xs font-medium rounded-xl flex items-center justify-center gap-1.5 shadow-xs transition-colors cursor-pointer disabled:opacity-50 ml-auto"

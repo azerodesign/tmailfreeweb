@@ -1,29 +1,42 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { X, Sparkles, AlertCircle, Loader2 } from 'lucide-react'
+import { Turnstile, type TurnstileInstance } from '@marsidev/react-turnstile'
 import { fetchActiveDomains, type DomainItem } from '../services/mailApi'
+import { AdblockModal } from './AdblockModal'
 
 interface CustomEmailModalProps {
   isOpen: boolean
   onClose: () => void
-  onSubmit: (username: string, domain: string) => Promise<boolean>
+  onSubmit: (username: string, domain: string, turnstileToken?: string) => Promise<boolean>
+  isLimitReached?: boolean
 }
 
 export const CustomEmailModal: React.FC<CustomEmailModalProps> = ({
   isOpen,
   onClose,
   onSubmit,
+  isLimitReached,
 }) => {
   const [username, setUsername] = useState('')
   const [domains, setDomains] = useState<DomainItem[]>([])
   const [selectedDomain, setSelectedDomain] = useState<string>('')
   const [isLoadingDomains, setIsLoadingDomains] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [isAdblockModalOpen, setIsAdblockModalOpen] = useState(false)
+  const turnstileRef = useRef<TurnstileInstance>(null)
 
   useEffect(() => {
     if (!isOpen) {
       setUsername('')
       setError(null)
+      setTurnstileToken(null)
+      try {
+        turnstileRef.current?.reset()
+      } catch {
+        // ignore
+      }
       return
     }
 
@@ -57,7 +70,6 @@ export const CustomEmailModal: React.FC<CustomEmailModalProps> = ({
     if (!trimmed) return 'Username tidak boleh kosong'
     if (trimmed.length < 3) return 'Username minimal 3 karakter'
     if (trimmed.length > 30) return 'Username maksimal 30 karakter'
-    // Izinkan huruf kecil, angka, titik, strip
     if (!/^[a-zA-Z0-9._-]+$/.test(trimmed)) {
       return 'Hanya boleh berisi huruf, angka, titik (.), strip (-), atau underscore (_)'
     }
@@ -75,14 +87,30 @@ export const CustomEmailModal: React.FC<CustomEmailModalProps> = ({
       setError('Pilih domain terlebih dahulu')
       return
     }
+    if (!turnstileToken) {
+      setError('Selesaikan verifikasi captcha Turnstile terlebih dahulu')
+      return
+    }
 
     setError(null)
     setIsSubmitting(true)
     try {
-      await onSubmit(username.trim().toLowerCase(), selectedDomain)
+      await onSubmit(username.trim().toLowerCase(), selectedDomain, turnstileToken)
+      setTurnstileToken(null)
+      try {
+        turnstileRef.current?.reset()
+      } catch {
+        // ignore
+      }
       onClose()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Gagal membuat custom email')
+      setTurnstileToken(null)
+      try {
+        turnstileRef.current?.reset()
+      } catch {
+        // ignore
+      }
     } finally {
       setIsSubmitting(false)
     }
@@ -109,6 +137,13 @@ export const CustomEmailModal: React.FC<CustomEmailModalProps> = ({
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          {isLimitReached && (
+            <div className="p-3 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/50 text-rose-600 dark:text-rose-400 rounded-xl text-xs flex items-start gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+              <span>Batas 100 email harian tercapai. Reset jam 00:00 UTC.</span>
+            </div>
+          )}
+
           {error && (
             <div className="p-3 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/50 text-rose-600 dark:text-rose-400 rounded-xl text-xs flex items-start gap-2">
               <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
@@ -164,6 +199,50 @@ export const CustomEmailModal: React.FC<CustomEmailModalProps> = ({
             </div>
           )}
 
+          {/* Turnstile Captcha Widget */}
+          <div className="pt-1 flex flex-col items-center justify-center min-h-17">
+            <Turnstile
+              ref={turnstileRef}
+              siteKey="0x4AAAAAAEpy2WzEANyDLppL"
+              onSuccess={(token) => {
+                setTurnstileToken(token)
+                setError(null)
+              }}
+              onExpire={() => {
+                setTurnstileToken(null)
+              }}
+              onError={(errorCode) => {
+                setTurnstileToken(null)
+                const codeStr = String(errorCode || '')
+
+                // Cloudflare Turnstile error codes:
+                // 110600-110620 (timeout), 400020 / 300xxx (config / domain mismatch / invalid key)
+                // Jangan trigger AdblockModal jika error karena domain mismatch / config
+                if (codeStr.includes('400020') || codeStr.startsWith('400') || codeStr.includes('110200')) {
+                  console.warn(`[Turnstile Config Notice] Error code: ${codeStr}. Domain mismatch atau konfigurasi Cloudflare Turnstile dashboard.`)
+                  setError('Verifikasi captcha gagal (domain belum terdaftar di Cloudflare Turnstile dashboard).')
+                  return
+                }
+
+                // Cek apakah script Turnstile benar-benar diblokir oleh ekstensi browser / adblocker
+                const isScriptBlocked =
+                  typeof window !== 'undefined' &&
+                  (!('turnstile' in window) || !(window as unknown as { turnstile?: unknown }).turnstile)
+
+                if (isScriptBlocked || codeStr === 'network_error' || codeStr.includes('200500')) {
+                  setIsAdblockModalOpen(true)
+                } else {
+                  console.warn(`[Turnstile Error] Code: ${codeStr}`)
+                  setError(`Gagal memuat captcha (${codeStr || 'error'}). Coba refresh halaman.`)
+                }
+              }}
+              options={{
+                theme: 'auto',
+                size: 'normal',
+              }}
+            />
+          </div>
+
           <div className="pt-2 flex items-center justify-end gap-2.5">
             <button
               type="button"
@@ -175,8 +254,8 @@ export const CustomEmailModal: React.FC<CustomEmailModalProps> = ({
             </button>
             <button
               type="submit"
-              disabled={isSubmitting || !username.trim()}
-              className="h-10 px-5 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 disabled:opacity-50 text-white font-medium text-xs rounded-xl flex items-center gap-2 shadow-xs transition-colors cursor-pointer"
+              disabled={isSubmitting || isLimitReached || !username.trim() || !turnstileToken}
+              className="h-10 px-5 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium text-xs rounded-xl flex items-center gap-2 shadow-xs transition-colors cursor-pointer"
             >
               {isSubmitting ? (
                 <>
@@ -190,6 +269,12 @@ export const CustomEmailModal: React.FC<CustomEmailModalProps> = ({
           </div>
         </form>
       </div>
+
+      {/* Adblocker Warning Modal */}
+      <AdblockModal
+        isOpen={isAdblockModalOpen}
+        onClose={() => setIsAdblockModalOpen(false)}
+      />
     </div>
   )
 }

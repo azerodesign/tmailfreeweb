@@ -119,7 +119,7 @@ export const MessageModal: React.FC<MessageModalProps> = ({
                 <User className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500" />
                 <span>{sender.name}</span>
                 {sender.email && sender.email !== sender.name && (
-                  <span className="text-slate-400 dark:text-slate-500 font-normal truncate max-w-50 sm:max-w-xs">
+                  <span className="text-slate-400 dark:text-slate-500 font-mono text-[11px] truncate max-w-50 sm:max-w-xs">
                     &lt;{sender.email}&gt;
                   </span>
                 )}
@@ -196,7 +196,7 @@ export const MessageModal: React.FC<MessageModalProps> = ({
               title="Email content"
               srcDoc={htmlContent}
               sandbox="allow-same-origin"
-              className="w-full min-h-[350px] border-0 rounded-lg bg-white"
+              className="w-full min-h-87.5 border-0 rounded-lg bg-white"
             />
           ) : (
             <div className="whitespace-pre-wrap leading-relaxed bg-slate-50/70 dark:bg-slate-950/60 p-4 rounded-xl border border-slate-100 dark:border-slate-800 font-mono text-xs sm:text-sm text-slate-700 dark:text-slate-300">

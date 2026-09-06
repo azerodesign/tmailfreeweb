@@ -1,14 +1,15 @@
 import React from 'react'
-import { Mail, ShieldCheck, Sun, Moon } from 'lucide-react'
+import { Mail, ShieldCheck, Sun, Moon, Code2 } from 'lucide-react'
 import type { Theme } from '../hooks/useTheme'
 
 interface HeaderProps {
   isPolling?: boolean
   theme: Theme
   onToggleTheme: () => void
+  onOpenApiDocs: () => void
 }
 
-export const Header: React.FC<HeaderProps> = ({ isPolling, theme, onToggleTheme }) => {
+export const Header: React.FC<HeaderProps> = ({ isPolling, theme, onToggleTheme, onOpenApiDocs }) => {
   return (
     <header className="flex items-center justify-between py-5 border-b border-slate-200/70 dark:border-slate-800/80 mb-6 transition-colors">
       <div className="flex items-center space-x-3">
@@ -34,6 +35,17 @@ export const Header: React.FC<HeaderProps> = ({ isPolling, theme, onToggleTheme 
             No Signup Required
           </span>
         </div>
+
+        {/* Developers / API Docs Button */}
+        <button
+          type="button"
+          onClick={onOpenApiDocs}
+          title="Developers & API Documentation"
+          className="h-10 px-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/80 flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer text-xs font-medium"
+        >
+          <Code2 className="w-4 h-4 text-indigo-500 dark:text-indigo-400" />
+          <span className="hidden md:inline">Developers / API</span>
+        </button>
 
         {/* Dark Mode Toggle */}
         <button
