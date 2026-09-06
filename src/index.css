@@ -2,6 +2,11 @@
 
 @layer base {
   body {
-    @apply bg-slate-50 text-slate-800 antialiased min-h-screen font-sans;
+    @apply bg-slate-50 text-slate-800 antialiased min-h-screen font-sans transition-colors duration-200;
+  }
+
+  html.dark body {
+    @apply bg-slate-950 text-slate-100;
   }
 }
+

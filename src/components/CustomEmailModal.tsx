@@ -38,6 +38,9 @@ export const CustomEmailModal: React.FC<CustomEmailModalProps> = ({
           }
         }
       })
+      .catch(() => {
+        // ignore
+      })
       .finally(() => {
         if (active) setIsLoadingDomains(false)
       })
@@ -86,19 +89,19 @@ export const CustomEmailModal: React.FC<CustomEmailModalProps> = ({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs animate-in fade-in duration-150">
-      <div className="bg-white w-full max-w-md rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 dark:bg-black/70 backdrop-blur-xs animate-in fade-in duration-150">
+      <div className="bg-white dark:bg-slate-900 w-full max-w-md rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 overflow-hidden transition-colors">
         {/* Header */}
-        <div className="p-5 border-b border-slate-100 flex items-center justify-between">
+        <div className="p-5 border-b border-slate-100 dark:border-slate-800/80 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
               <Sparkles className="w-4 h-4" />
             </div>
-            <h3 className="font-semibold text-slate-800 text-base">Custom Email Address</h3>
+            <h3 className="font-semibold text-slate-800 dark:text-white text-base">Custom Email Address</h3>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
@@ -107,14 +110,14 @@ export const CustomEmailModal: React.FC<CustomEmailModalProps> = ({
         {/* Form */}
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           {error && (
-            <div className="p-3 bg-rose-50 border border-rose-200 text-rose-600 rounded-xl text-xs flex items-start gap-2">
+            <div className="p-3 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/50 text-rose-600 dark:text-rose-400 rounded-xl text-xs flex items-start gap-2">
               <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
               <span>{error}</span>
             </div>
           )}
 
           <div>
-            <label className="block text-xs font-semibold text-slate-600 mb-1.5">Username</label>
+            <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5">Username</label>
             <input
               type="text"
               placeholder="e.g. azero, mybox, john"
@@ -125,21 +128,21 @@ export const CustomEmailModal: React.FC<CustomEmailModalProps> = ({
               }}
               disabled={isSubmitting}
               autoFocus
-              className="w-full h-11 px-3.5 text-sm bg-slate-50 border border-slate-200 rounded-xl text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors"
+              className="w-full h-11 px-3.5 text-sm bg-slate-50 dark:bg-slate-950/70 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-800 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-600 mb-1.5">Domain</label>
+            <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5">Domain</label>
             <div className="relative">
               <select
                 value={selectedDomain}
                 onChange={(e) => setSelectedDomain(e.target.value)}
                 disabled={isLoadingDomains || isSubmitting}
-                className="w-full h-11 px-3.5 text-sm bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors appearance-none cursor-pointer"
+                className="w-full h-11 px-3.5 text-sm bg-slate-50 dark:bg-slate-950/70 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors appearance-none cursor-pointer"
               >
                 {domains.map((d) => (
-                  <option key={d.id} value={d.domain}>
+                  <option key={d.id} value={d.domain} className="dark:bg-slate-900 dark:text-white">
                     @{d.domain}
                   </option>
                 ))}
@@ -153,8 +156,8 @@ export const CustomEmailModal: React.FC<CustomEmailModalProps> = ({
           </div>
 
           {username && selectedDomain && (
-            <div className="p-3 rounded-xl bg-indigo-50/70 border border-indigo-100/80 text-xs text-indigo-900 font-mono flex items-center justify-between">
-              <span className="text-slate-500 text-[11px]">Preview:</span>
+            <div className="p-3 rounded-xl bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-100/80 dark:border-indigo-900/40 text-xs text-indigo-900 dark:text-indigo-200 font-mono flex items-center justify-between">
+              <span className="text-slate-500 dark:text-slate-400 text-[11px]">Preview:</span>
               <span className="font-semibold truncate">
                 {username.trim().toLowerCase()}@{selectedDomain}
               </span>
@@ -166,7 +169,7 @@ export const CustomEmailModal: React.FC<CustomEmailModalProps> = ({
               type="button"
               onClick={onClose}
               disabled={isSubmitting}
-              className="h-10 px-4 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
+              className="h-10 px-4 text-xs font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors cursor-pointer"
             >
               Cancel
             </button>
