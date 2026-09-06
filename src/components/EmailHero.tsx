@@ -145,17 +145,7 @@ export const EmailHero: React.FC<EmailHeroProps> = ({
             <span className="whitespace-nowrap">New</span>
           </button>
 
-          <button
-            onClick={onOpenCustom}
-            disabled={isGenerating}
-            title="Create custom email address"
-            className="h-12 px-4 bg-indigo-50 border border-indigo-200/80 hover:bg-indigo-100/70 text-indigo-700 text-sm font-medium rounded-xl flex items-center justify-center gap-1.5 shadow-xs transition-colors cursor-pointer disabled:opacity-50 flex-1 sm:flex-initial"
-          >
-            <Sparkles className="w-4 h-4 text-indigo-600" />
-            <span className="whitespace-nowrap font-semibold">Custom</span>
-          </button>
-
-          {/* Domain Dropdown Button */}
+          {/* Change Domain Dropdown Button */}
           <div className="relative flex-1 sm:flex-initial" ref={dropdownRef}>
             <button
               type="button"
@@ -166,8 +156,9 @@ export const EmailHero: React.FC<EmailHeroProps> = ({
             >
               <div className="flex items-center gap-1.5">
                 <Globe className="w-4 h-4 text-indigo-500" />
-                <span className="font-mono text-xs text-slate-600 truncate max-w-32">
-                  {currentDomain ? `@${currentDomain}` : 'Domain'}
+                <span className="whitespace-nowrap font-medium">Change Domain</span>
+                <span className="font-mono text-xs text-slate-400 truncate max-w-28 hidden md:inline">
+                  {currentDomain ? `(@${currentDomain})` : ''}
                 </span>
               </div>
               <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-150 ${isDomainDropdownOpen ? 'rotate-180' : ''}`} />
@@ -201,6 +192,16 @@ export const EmailHero: React.FC<EmailHeroProps> = ({
               </div>
             )}
           </div>
+
+          <button
+            onClick={onOpenCustom}
+            disabled={isGenerating}
+            title="Create custom email address"
+            className="h-12 px-4 bg-indigo-50 border border-indigo-200/80 hover:bg-indigo-100/70 text-indigo-700 text-sm font-medium rounded-xl flex items-center justify-center gap-1.5 shadow-xs transition-colors cursor-pointer disabled:opacity-50 flex-1 sm:flex-initial"
+          >
+            <Sparkles className="w-4 h-4 text-indigo-600" />
+            <span className="whitespace-nowrap font-semibold">Custom</span>
+          </button>
 
           <button
             onClick={onDeleteMailbox}
