@@ -117,11 +117,15 @@ export async function deleteMessage(_token: string, messageId: string, address?:
 }
 
 export function generateRandomCreds(domain: string) {
-  const chars = 'abcdefghijklmnopqrstuvwxyz0123456789'
-  let username = ''
-  for (let i = 0; i < 7; i++) {
-    username += chars.charAt(Math.floor(Math.random() * chars.length))
-  }
+  const prefixes = [
+    'sky', 'alex', 'nova', 'echo', 'zeno', 'luna', 'max', 'leo',
+    'kai', 'rio', 'fox', 'ray', 'milo', 'cruz', 'dash', 'finn',
+    'orion', 'spark', 'blaze', 'pixel', 'swift', 'pulse', 'vibe',
+    'nexa', 'clover', 'storm', 'frost', 'shadow', 'drift', 'aero'
+  ]
+  const randomPrefix = prefixes[Math.floor(Math.random() * prefixes.length)]
+  const randomNum = Math.floor(100 + Math.random() * 900)
+  const username = `${randomPrefix}${randomNum}`
   const address = `${username}@${domain}`
   const password = `Tmp!${Math.random().toString(36).slice(-8)}`
   return { address, password }

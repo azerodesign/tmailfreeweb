@@ -169,11 +169,11 @@ export const EmailHero: React.FC<EmailHeroProps> = ({
             </button>
 
             {isDomainDropdownOpen && (
-              <div className="absolute left-0 top-full mt-1.5 w-56 bg-white dark:bg-slate-900 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700/80 py-1.5 z-40 animate-in fade-in zoom-in-95 duration-100">
-                <div className="px-3 py-1.5 border-b border-slate-100 dark:border-slate-800 text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+              <div className="absolute left-0 sm:left-auto sm:right-0 top-full mt-2 w-64 bg-white dark:bg-slate-900 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-800 py-1.5 z-50 animate-in fade-in zoom-in-95 duration-100">
+                <div className="px-3.5 py-1.5 border-b border-slate-100 dark:border-slate-800 text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
                   Select Domain
                 </div>
-                <div className="max-h-56 overflow-y-auto py-1">
+                <div className="max-h-60 overflow-y-auto py-1">
                   {domains.map((d) => {
                     const isSelected = d.domain === currentDomain
                     return (
@@ -181,13 +181,13 @@ export const EmailHero: React.FC<EmailHeroProps> = ({
                         key={d.id}
                         type="button"
                         onClick={() => handleDomainSelect(d.domain)}
-                        className={`w-full text-left px-3 py-2 text-xs flex items-center justify-between transition-colors cursor-pointer ${
+                        className={`w-full text-left px-3.5 py-2.5 text-xs flex items-center justify-between transition-colors cursor-pointer ${
                           isSelected
-                            ? 'bg-indigo-50/80 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 font-semibold'
-                            : 'text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/80'
+                            ? 'bg-indigo-50 dark:bg-indigo-950/70 text-indigo-700 dark:text-indigo-300 font-semibold'
+                            : 'text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800/80'
                         }`}
                       >
-                        <span className="font-mono truncate">@{d.domain}</span>
+                        <span className="font-mono truncate text-xs">@{d.domain}</span>
                         {isSelected && <Check className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 shrink-0" />}
                       </button>
                     )

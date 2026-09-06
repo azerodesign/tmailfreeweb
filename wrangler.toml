@@ -11,5 +11,8 @@ binding = "ASSETS"
 binding = "TMAIL_INBOX"
 id = "4e97f90248214ed087c0a3b43b40ee0c"
 
+[observability]
+enabled = true
+
 [vars]
 DOMAINS = "amailang.my.id,mailian.my.id,otpinn.my.id,tempol.my.id,gaskenn.biz.id"

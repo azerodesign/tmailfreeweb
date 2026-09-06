@@ -39,13 +39,13 @@ export const Header: React.FC<HeaderProps> = ({ isPolling, theme, onToggleTheme 
         <button
           type="button"
           onClick={onToggleTheme}
-          title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+          title={theme === 'dark' ? 'Dark Mode (Active)' : 'Light Mode (Active)'}
           className="w-10 h-10 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/80 flex items-center justify-center shadow-xs transition-colors cursor-pointer"
         >
           {theme === 'dark' ? (
-            <Sun className="w-4 h-4 text-amber-400 hover:rotate-45 transition-transform" />
+            <Moon className="w-4 h-4 text-indigo-400 hover:-rotate-12 transition-transform" />
           ) : (
-            <Moon className="w-4 h-4 text-slate-600 hover:-rotate-12 transition-transform" />
+            <Sun className="w-4 h-4 text-amber-500 hover:rotate-45 transition-transform" />
           )}
           <span className="sr-only">Toggle Theme</span>
         </button>

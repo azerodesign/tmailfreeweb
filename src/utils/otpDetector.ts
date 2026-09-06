@@ -1,40 +1,52 @@
 /**
  * Extract verification / OTP codes from subject or email body snippet.
- * Matches common 4 to 8 digit/alphanumeric verification codes.
+ * Strictly matches 4 to 6 pure numeric digits with context keywords.
  */
 export function extractOtpCode(subject = '', body = ''): string | null {
-  const combined = `${subject} ${body}`
+  const cleanSubject = subject || ''
+  const cleanBody = body || ''
+  const combined = `${cleanSubject} ${cleanBody}`
 
-  // 1. Explicit OTP keywords followed by code: e.g. "OTP: 123456", "verification code: 48192", "kode: 9281"
-  const explicitPattern = /(?:otp|code|kode|pin|verification|verifikasi|auth|token)[^\w\d\r\n]{1,10}([0-9]{4,8}|[A-Z0-9]{5,8})\b/i
-  const explicitMatch = combined.match(explicitPattern)
-  if (explicitMatch && explicitMatch[1]) {
-    // Avoid matched common years like 2024, 2025, 2026
-    const val = explicitMatch[1]
-    if (!/^(19|20)\d{2}$/.test(val)) {
+  // 1. Strict pattern: keyword followed by 4-6 digits:
+  // e.g. "OTP: 123456", "kode verifikasi Anda adalah 582910", "code is 4921"
+  const keywordAfterPattern = /(?:otp|kode|code|pin|verifikasi|verification|auth|token|security code)[\s:=#\-_]{1,15}(\d{4,6})\b/i
+  const matchAfter = combined.match(keywordAfterPattern)
+  if (matchAfter && matchAfter[1]) {
+    const val = matchAfter[1]
+    if (!isInvalidYearOrCommonNumber(val)) {
       return val
     }
   }
 
-  // 2. Bracketed or isolated digits: [123456], (123456), " 123456 " in subject
-  const subjectDigitMatch = subject.match(/(?:\[|\(|\b)([0-9]{4,8})(?:\]|\)|\b)/)
-  if (subjectDigitMatch && subjectDigitMatch[1]) {
-    const val = subjectDigitMatch[1]
-    if (!/^(19|20)\d{2}$/.test(val)) {
+  // 2. Strict pattern: 4-6 digits followed closely by keyword:
+  // e.g. "123456 is your verification code", "5829 adalah kode OTP"
+  const keywordBeforePattern = /\b(\d{4,6})[\s:=#\-_]{1,15}(?:is your (?:code|otp|verification)|adalah kode (?:otp|verifikasi)|merupakan kode)/i
+  const matchBefore = combined.match(keywordBeforePattern)
+  if (matchBefore && matchBefore[1]) {
+    const val = matchBefore[1]
+    if (!isInvalidYearOrCommonNumber(val)) {
       return val
     }
   }
 
-  // 3. Fallback: standard 4-6 digit standalone numbers in body if subject hints verification
-  if (/(?:verify|verification|verifikasi|security|confirm|konfirmasi|login|sign in|daftar)/i.test(combined)) {
-    const genericDigits = combined.match(/\b([0-9]{4,6})\b/)
-    if (genericDigits && genericDigits[1]) {
-      const val = genericDigits[1]
-      if (!/^(19|20)\d{2}$/.test(val)) {
+  // 3. Bracketed 4-6 digits in subject ONLY if subject mentions verification context
+  if (/(?:otp|code|kode|verif|confirm|konfirm|login|sign in|auth|netflix|google|whatsapp|telegram)/i.test(cleanSubject)) {
+    const bracketMatch = cleanSubject.match(/(?:\[|\(|【|\b)(\d{4,6})(?:\]|\)|】|\b)/)
+    if (bracketMatch && bracketMatch[1]) {
+      const val = bracketMatch[1]
+      if (!isInvalidYearOrCommonNumber(val)) {
         return val
       }
     }
   }
 
   return null
+}
+
+function isInvalidYearOrCommonNumber(val: string): boolean {
+  // Reject 4-digit years like 1900-2099
+  if (/^(19|20)\d{2}$/.test(val)) return true
+  // Reject repetitive numbers like 0000, 1111, 000000
+  if (/^(\d)\1{3,5}$/.test(val)) return true
+  return false
 }
