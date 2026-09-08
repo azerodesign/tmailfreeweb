@@ -62,9 +62,10 @@ const TIERS_DETAIL = [
     specs: [
       { label: 'Kuota Generate Harian', val: '2.000 Email / Hari' },
       { label: 'Retensi Email Masuk', val: '365 Hari (1 Tahun)' },
-      { label: 'Domain Slot Pribadi', val: '8 Custom Domain' },
-      { label: 'Layanan API Access', val: 'Full API + TMailnie Web' },
-      { label: 'Dukungan Prioritas', val: 'VIP Diskusi Group' },
+      { label: 'Fitur Auto Rotate Domain', val: 'Aktif (Auto Switch)' },
+      { label: 'Chrome Extension TMail', val: 'Akses Penuh Extension' },
+      { label: 'Domain Slot Pribadi', val: '20 Custom Domain .my.id & Lainnya' },
+      { label: 'Akses Ekstra Web', val: 'Web Access TMailnie & VIP Group' },
     ],
   },
   {
@@ -82,8 +83,9 @@ const TIERS_DETAIL = [
     specs: [
       { label: 'Kuota Generate Harian', val: '6.000 Email / Hari' },
       { label: 'Fitur Auto Rotate Domain', val: 'Aktif (Auto Switch)' },
-      { label: 'Domain Slot Pribadi', val: 'Free 2 .my.id + .com' },
-      { label: 'Layanan API Access', val: 'Unlimited Bearer Token' },
+      { label: 'Chrome Extension TMail', val: 'Akses Penuh Extension' },
+      { label: 'Domain Slot Pribadi', val: '20 Custom Domain .my.id, .com, & Lainnya' },
+      { label: 'Exclusive Membership', val: 'FREE Akses Membership Method Aztors' },
       { label: 'Akses Fitur Terbaru', val: 'Update Prioritas Awal' },
     ],
   },

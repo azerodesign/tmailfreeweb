@@ -51,9 +51,13 @@ export function App() {
   const [selectedMessage, setSelectedMessage] = useState<MessageItem | null>(null)
   const [isCustomModalOpen, setIsCustomModalOpen] = useState(false)
 
-  // 1. Route Admin Gate
+  // 1. Route Admin Gate & Public Benefit Page
   if (isAdminRoute) {
     return <AdminPanel />
+  }
+
+  if (isBenefitRoute) {
+    return <BenefitPanel />
   }
 
   // 2. Auth Gate Check for `/inbox`, `/apikey`, and `/logs`
