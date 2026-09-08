@@ -12,9 +12,33 @@ import {
 import { playDingSound } from '../utils/sound'
 
 const STORAGE_KEY = 'tmail_session_v1'
-const POLLING_INTERVAL_SEC = 6
+const POLLING_INTERVAL_SEC = 3
+
+export interface LogItem {
+  id: string
+  timestamp: string
+  event: string
+  status: 'SUCCESS' | 'INFO' | 'WARN'
+}
+
+const TODAY_KEY = () => `tmail_gen_count_${new Date().toISOString().slice(0, 10)}`
 
 export function useMailbox() {
+  const [logs, setLogs] = useState<LogItem[]>([])
+  const [createdCount, setCreatedCount] = useState(() => {
+    const saved = localStorage.getItem(TODAY_KEY())
+    return saved ? parseInt(saved, 10) : 0
+  })
+
+  const addLog = useCallback((event: string, status: 'SUCCESS' | 'INFO' | 'WARN' = 'INFO') => {
+    const newLog: LogItem = {
+      id: Math.random().toString(36).substring(2, 9),
+      timestamp: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+      event,
+      status,
+    }
+    setLogs((prev) => [newLog, ...prev.slice(0, 49)])
+  }, [])
   const [account, setAccount] = useState<MailAccount | null>(() => {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (!raw) return null
@@ -87,6 +111,12 @@ export function useMailbox() {
       if (autoCopy) {
         await copyToClipboard(address)
       }
+      setCreatedCount((prev) => {
+        const next = prev + 1
+        localStorage.setItem(TODAY_KEY(), next.toString())
+        return next
+      })
+      addLog(`Created new mailbox address: ${address}`, 'SUCCESS')
     } catch (err) {
       if (isMounted.current) {
         setError(err instanceof Error ? err.message : 'Gagal membuat akun')
@@ -123,6 +153,8 @@ export function useMailbox() {
       }
 
       await copyToClipboard(address)
+      setCreatedCount((prev) => prev + 1)
+      addLog(`Created custom mailbox address: ${address}`, 'SUCCESS')
       return true
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Gagal membuat custom email'
@@ -162,7 +194,9 @@ export function useMailbox() {
         // Ding jika ada email baru (bukan load pertama)
         if (!isFirstLoad.current && list.length > prevMessagesCount.current) {
           playDingSound()
-          showToast(`New email received (${list.length - prevMessagesCount.current})`)
+          const newCount = list.length - prevMessagesCount.current
+          showToast(`New email received (${newCount})`)
+          addLog(`Received ${newCount} new email(s) in inbox`, 'SUCCESS')
         }
         isFirstLoad.current = false
         prevMessagesCount.current = list.length
@@ -227,6 +261,8 @@ export function useMailbox() {
     lastChecked,
     countdown,
     toastMessage,
+    logs,
+    createdCount,
     fetchInbox: () => fetchInbox(false),
     initNewAccount: () => initNewAccount(true),
     createCustomAccount,

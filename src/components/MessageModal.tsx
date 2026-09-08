@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react'
-import { X, Trash2, User, Clock, Loader2, AlertCircle, FileText, Code } from 'lucide-react'
+import { X, Trash2, User, Clock, Loader2, AlertCircle, FileText, Code, KeyRound, Copy, CheckCircle2 } from 'lucide-react'
 import { getMessageDetail, type MessageDetail, type MessageItem } from '../services/mailApi'
 import { parseSender } from '../utils/formatSender'
+import { HoverBorderGradient } from './ui/hover-border-gradient'
 
 interface MessageModalProps {
   messageItem: MessageItem | null
@@ -9,6 +10,13 @@ interface MessageModalProps {
   address?: string | null
   onClose: () => void
   onDelete: (id: string) => Promise<void>
+}
+
+// Extract 4 to 8 digit OTP codes from subject or email body
+function extractOtpCode(text: string, subject: string): string | null {
+  const fullText = `${subject} ${text}`
+  const match = fullText.match(/\b(\d{4,8})\b/)
+  return match ? match[1] : null
 }
 
 export const MessageModal: React.FC<MessageModalProps> = ({
@@ -23,6 +31,7 @@ export const MessageModal: React.FC<MessageModalProps> = ({
   const [isDeleting, setIsDeleting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [viewMode, setViewMode] = useState<'html' | 'text'>('html')
+  const [copiedOtp, setCopiedOtp] = useState(false)
 
   useEffect(() => {
     if (!messageItem) {
@@ -34,6 +43,7 @@ export const MessageModal: React.FC<MessageModalProps> = ({
     setIsLoading(true)
     setError(null)
     setViewMode('html')
+    setCopiedOtp(false)
 
     getMessageDetail(token || '', messageItem.id, address || undefined)
       .then((data) => {
@@ -70,26 +80,40 @@ export const MessageModal: React.FC<MessageModalProps> = ({
   const htmlContent = detail?.html && detail.html.length > 0 ? detail.html[0] : null
   const textContent = detail?.text || messageItem.intro
 
+  // Auto-detect OTP Code
+  const detectedOtp = extractOtpCode(textContent + ' ' + (htmlContent || ''), messageItem.subject || '')
+
+  const handleCopyOtp = async () => {
+    if (!detectedOtp) return
+    try {
+      await navigator.clipboard.writeText(detectedOtp)
+      setCopiedOtp(true)
+      setTimeout(() => setCopiedOtp(false), 2000)
+    } catch {
+      // ignore
+    }
+  }
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs animate-in fade-in duration-150">
-      <div className="bg-white w-full max-w-2xl rounded-2xl shadow-xl border border-slate-200 overflow-hidden flex flex-col max-h-[88vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#07050e]/80 backdrop-blur-md animate-in fade-in duration-150">
+      <div className="bg-[#0f0b1a] w-full max-w-2xl rounded-3xl shadow-2xl border border-purple-500/30 overflow-hidden flex flex-col max-h-[88vh] text-slate-100">
         {/* Header */}
-        <div className="p-5 sm:px-6 border-b border-slate-100 flex items-center justify-between gap-4">
+        <div className="p-5 sm:px-6 border-b border-purple-500/20 flex items-center justify-between gap-4">
           <div className="min-w-0 flex-1">
-            <h3 className="text-base sm:text-lg font-bold text-slate-800 truncate">
-              {messageItem.subject || '(No Subject)'}
+            <h3 className="text-base sm:text-lg font-bold text-white truncate tracking-tight">
+              {messageItem.subject || '(Tanpa Subjek)'}
             </h3>
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500 mt-1">
-              <span className="flex items-center gap-1.5 font-medium text-slate-700">
-                <User className="w-3.5 h-3.5 text-slate-400" />
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-purple-300/70 mt-1 font-mono">
+              <span className="flex items-center gap-1.5 font-medium text-purple-200">
+                <User className="w-3.5 h-3.5 text-purple-400" />
                 <span>{sender.name}</span>
                 {sender.email && sender.email !== sender.name && (
-                  <span className="text-slate-400 font-normal truncate max-w-50 sm:max-w-xs">
+                  <span className="text-purple-400/60 font-normal truncate max-w-50 sm:max-w-xs">
                     &lt;{sender.email}&gt;
                   </span>
                 )}
               </span>
-              <span className="flex items-center gap-1 text-slate-400">
+              <span className="flex items-center gap-1 text-purple-400/60">
                 <Clock className="w-3.5 h-3.5" />
                 {new Date(messageItem.createdAt).toLocaleString()}
               </span>
@@ -99,14 +123,14 @@ export const MessageModal: React.FC<MessageModalProps> = ({
           <div className="flex items-center gap-1 shrink-0">
             {/* View Mode Toggle */}
             {htmlContent && (
-              <div className="flex items-center bg-slate-100 p-0.5 rounded-lg mr-1 text-xs">
+              <div className="flex items-center bg-[#07050e] p-1 rounded-xl mr-1 text-xs border border-purple-500/20 font-mono">
                 <button
                   type="button"
                   onClick={() => setViewMode('html')}
-                  className={`px-2.5 py-1 rounded-md font-medium transition-all cursor-pointer flex items-center gap-1 ${
+                  className={`px-2.5 py-1 rounded-lg font-semibold transition-all cursor-pointer flex items-center gap-1 ${
                     viewMode === 'html'
-                      ? 'bg-white text-indigo-600 shadow-xs'
-                      : 'text-slate-500 hover:text-slate-700'
+                      ? 'bg-purple-500/20 text-purple-200 border border-purple-500/30'
+                      : 'text-purple-300/60 hover:text-white'
                   }`}
                 >
                   <Code className="w-3 h-3" />
@@ -115,10 +139,10 @@ export const MessageModal: React.FC<MessageModalProps> = ({
                 <button
                   type="button"
                   onClick={() => setViewMode('text')}
-                  className={`px-2.5 py-1 rounded-md font-medium transition-all cursor-pointer flex items-center gap-1 ${
+                  className={`px-2.5 py-1 rounded-lg font-semibold transition-all cursor-pointer flex items-center gap-1 ${
                     viewMode === 'text'
-                      ? 'bg-white text-indigo-600 shadow-xs'
-                      : 'text-slate-500 hover:text-slate-700'
+                      ? 'bg-purple-500/20 text-purple-200 border border-purple-500/30'
+                      : 'text-purple-300/60 hover:text-white'
                   }`}
                 >
                   <FileText className="w-3 h-3" />
@@ -128,46 +152,91 @@ export const MessageModal: React.FC<MessageModalProps> = ({
             )}
 
             <button
-              onClick={handleDelete}
-              disabled={isDeleting}
-              title="Delete email"
-              className="p-2 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
-            >
-              {isDeleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-            </button>
-            <button
               onClick={onClose}
-              className="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+              className="p-2 rounded-xl text-purple-300/60 hover:text-white hover:bg-purple-950/40 transition cursor-pointer"
             >
               <X className="w-5 h-5" />
             </button>
           </div>
         </div>
 
+        {/* Auto-Detected OTP Card Strip */}
+        {detectedOtp && (
+          <div className="bg-purple-950/40 border-b border-purple-500/20 p-4 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-purple-500/20 border border-purple-500/30 text-purple-300 flex items-center justify-center">
+                <KeyRound className="w-4 h-4" />
+              </div>
+              <div>
+                <span className="text-[10px] font-mono text-purple-300/70 uppercase tracking-wider block">
+                  Kode Verification / OTP Terdeteksi
+                </span>
+                <span className="font-mono font-extrabold text-xl text-purple-200 tracking-wider">
+                  {detectedOtp}
+                </span>
+              </div>
+            </div>
+
+            <HoverBorderGradient
+              onClick={handleCopyOtp}
+              className="px-4 py-2 text-xs flex items-center gap-1.5"
+            >
+              {copiedOtp ? (
+                <>
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                  <span className="text-emerald-400 font-bold">Copied OTP!</span>
+                </>
+              ) : (
+                <>
+                  <Copy className="w-3.5 h-3.5 text-purple-400" />
+                  <span>1-Click Copy OTP</span>
+                </>
+              )}
+            </HoverBorderGradient>
+          </div>
+        )}
+
         {/* Body Content */}
-        <div className="p-5 sm:p-6 overflow-y-auto flex-1 text-sm text-slate-700">
+        <div className="p-5 sm:px-6 flex-1 overflow-y-auto min-h-48 relative">
           {isLoading ? (
-            <div className="py-16 flex flex-col items-center justify-center text-slate-400 gap-2">
-              <Loader2 className="w-6 h-6 animate-spin text-indigo-500" />
-              <span className="text-xs">Loading message content...</span>
+            <div className="flex flex-col items-center justify-center py-16 text-purple-400">
+              <Loader2 className="w-8 h-8 animate-spin mb-3" />
+              <p className="text-xs font-mono">Memuat detail isi pesan...</p>
             </div>
           ) : error ? (
-            <div className="py-8 flex flex-col items-center justify-center text-rose-500 gap-2">
-              <AlertCircle className="w-6 h-6" />
-              <span className="text-xs">{error}</span>
+            <div className="p-4 rounded-2xl bg-rose-950/80 border border-rose-800 text-rose-300 text-xs font-mono flex items-center gap-2.5">
+              <AlertCircle className="w-4 h-4 shrink-0" />
+              <span>{error}</span>
             </div>
           ) : viewMode === 'html' && htmlContent ? (
-            <iframe
-              title="Email content"
-              srcDoc={htmlContent}
-              sandbox="allow-same-origin"
-              className="w-full min-h-[350px] border-0 rounded-lg bg-white"
+            <div
+              className="prose prose-invert prose-purple max-w-none text-sm text-slate-200 overflow-x-auto"
+              dangerouslySetInnerHTML={{ __html: htmlContent }}
             />
           ) : (
-            <div className="whitespace-pre-wrap leading-relaxed bg-slate-50/70 p-4 rounded-xl border border-slate-100 font-mono text-xs sm:text-sm text-slate-700">
+            <pre className="whitespace-pre-wrap font-mono text-xs text-purple-200/90 leading-relaxed break-words">
               {textContent}
-            </div>
+            </pre>
           )}
+        </div>
+
+        {/* Footer */}
+        <div className="p-4 sm:px-6 border-t border-purple-500/20 bg-[#07050e]/60 flex items-center justify-between">
+          <button
+            onClick={handleDelete}
+            disabled={isDeleting}
+            className="px-3.5 py-2 rounded-xl text-rose-400 hover:bg-rose-950/50 hover:border-rose-800/60 border border-transparent transition text-xs font-mono font-semibold flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+          >
+            {isDeleting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+            <span>Hapus Pesan</span>
+          </button>
+
+          <button
+            onClick={onClose}
+            className="px-4 py-2 rounded-xl bg-[#07050e] border border-purple-500/30 hover:border-purple-500 text-purple-300 text-xs font-mono font-semibold transition cursor-pointer"
+          >
+            Tutup
+          </button>
         </div>
       </div>
     </div>

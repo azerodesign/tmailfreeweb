@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { Copy, Check, RefreshCw, PlusCircle, Loader2, Sparkles, Trash2, Globe, ChevronDown } from 'lucide-react'
 import { fetchActiveDomains, type DomainItem } from '../services/mailApi'
+import { SpotlightCard } from './SpotlightCard'
+import { HoverBorderGradient } from './ui/hover-border-gradient'
 
 interface EmailHeroProps {
   email: string | null
@@ -67,137 +69,127 @@ export const EmailHero: React.FC<EmailHeroProps> = ({
   }
 
   return (
-    <div className="bg-white rounded-2xl p-6 sm:p-8 shadow-sm border border-slate-200/80 mb-6 transition-all">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mb-4">
+    <SpotlightCard
+      className="bg-[#0f0b1a]/90 backdrop-blur-xl rounded-3xl p-6 sm:p-8 border border-purple-500/20 mb-6 shadow-2xl relative overflow-hidden"
+      spotlightColor="rgba(168, 85, 247, 0.25)"
+    >
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-5 border-b border-purple-500/20 pb-4">
         <div>
-          <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+          <span className="text-[11px] font-mono font-semibold uppercase tracking-wider text-purple-400/80">
             Active Temporary Address
           </span>
-          <h2 className="text-lg font-semibold text-slate-800">Your Mailbox Ready</h2>
+          <h2 className="text-lg font-bold text-white tracking-tight">Your VIP Mailbox Ready</h2>
         </div>
-        <div className="flex items-center gap-3 text-xs text-slate-400 font-medium">
-          <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200/60 px-2.5 py-1 rounded-full text-slate-500">
+        <div className="flex items-center gap-3 text-xs text-purple-300/70 font-mono">
+          <div className="flex items-center gap-1.5 bg-[#07050e] border border-purple-500/30 px-3 py-1 rounded-xl text-purple-300">
             <span className="relative flex h-2 w-2">
-              <span className={`absolute inline-flex h-full w-full rounded-full bg-emerald-400 ${isFetching ? 'animate-ping' : ''}`}></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+              <span className={`absolute inline-flex h-full w-full rounded-full bg-purple-400 ${isFetching ? 'animate-ping' : ''}`}></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-purple-500"></span>
             </span>
             <span>Auto-refresh: {countdown}s</span>
           </div>
           {lastChecked && (
-            <span className="hidden sm:inline text-slate-400">
-              Updated {lastChecked.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+            <span className="hidden sm:inline text-purple-400/60">
+              {lastChecked.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
             </span>
           )}
         </div>
       </div>
 
-      <div className="flex flex-col sm:flex-row items-stretch gap-2.5">
+      <div className="flex flex-col sm:flex-row items-stretch gap-3">
         <div className="relative flex-1">
           <input
             type="text"
             readOnly
-            value={isGenerating ? 'Generating mailbox address...' : email || ''}
-            className="w-full h-12 pl-4 pr-12 text-sm sm:text-base font-mono bg-slate-50 border border-slate-200 rounded-xl text-slate-700 select-all focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors"
+            value={isGenerating ? 'Generating VIP mailbox address...' : email || ''}
+            className="w-full h-12 pl-4 pr-12 text-sm sm:text-base font-mono bg-[#07050e]/90 border border-purple-500/30 rounded-xl text-purple-200 select-all focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition"
           />
           {isGenerating && (
-            <div className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400">
+            <div className="absolute right-3.5 top-1/2 -translate-y-1/2 text-purple-400">
               <Loader2 className="w-5 h-5 animate-spin" />
             </div>
           )}
         </div>
 
-        <button
+        <HoverBorderGradient
           onClick={handleCopy}
-          disabled={!email || isGenerating}
-          className="h-12 px-5 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 disabled:opacity-50 text-white font-medium text-sm rounded-xl flex items-center justify-center gap-2 shadow-xs transition-colors cursor-pointer"
+          className="h-12 px-6 flex items-center justify-center gap-2 cursor-pointer"
         >
           {copied ? (
             <>
-              <Check className="w-4 h-4 text-emerald-300" />
-              <span>Copied!</span>
+              <Check className="w-4 h-4 text-emerald-400" />
+              <span className="text-emerald-400 font-bold">Copied!</span>
             </>
           ) : (
             <>
-              <Copy className="w-4 h-4" />
-              <span>Copy</span>
+              <Copy className="w-4 h-4 text-purple-400" />
+              <span>Copy Email</span>
             </>
           )}
-        </button>
+        </HoverBorderGradient>
 
         <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
           <button
             onClick={onRefresh}
             disabled={isFetching || isGenerating}
             title="Refresh inbox"
-            className="h-12 px-3.5 bg-white border border-slate-200 hover:bg-slate-50 active:bg-slate-100 text-slate-700 text-sm font-medium rounded-xl flex items-center justify-center gap-1.5 shadow-xs transition-colors cursor-pointer disabled:opacity-50 flex-1 sm:flex-initial"
+            className="h-12 px-3.5 bg-[#07050e] border border-purple-500/30 hover:border-purple-500 text-purple-300 text-xs font-mono font-semibold rounded-xl flex items-center justify-center gap-1.5 transition disabled:opacity-50 flex-1 sm:flex-initial"
           >
-            <RefreshCw className={`w-4 h-4 text-slate-500 ${isFetching ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-4 h-4 text-purple-400 ${isFetching ? 'animate-spin' : ''}`} />
             <span className="sm:hidden">Refresh</span>
           </button>
 
           <button
             onClick={onGenerateNew}
             disabled={isGenerating}
-            title="Change random email address"
-            className="h-12 px-3.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-sm font-medium rounded-xl flex items-center justify-center gap-1.5 shadow-xs transition-colors cursor-pointer disabled:opacity-50 flex-1 sm:flex-initial"
+            title="Acak Email Baru"
+            className="h-12 px-3.5 bg-[#07050e] border border-purple-500/30 hover:border-purple-500 text-purple-300 text-xs font-mono font-semibold rounded-xl flex items-center justify-center gap-1.5 transition disabled:opacity-50 flex-1 sm:flex-initial"
           >
-            <PlusCircle className="w-4 h-4 text-slate-500" />
-            <span className="whitespace-nowrap">New</span>
+            <PlusCircle className="w-4 h-4 text-purple-400" />
+            <span className="whitespace-nowrap">Acak</span>
           </button>
 
           <button
             onClick={onOpenCustom}
             disabled={isGenerating}
-            title="Create custom email address"
-            className="h-12 px-4 bg-indigo-50 border border-indigo-200/80 hover:bg-indigo-100/70 text-indigo-700 text-sm font-medium rounded-xl flex items-center justify-center gap-1.5 shadow-xs transition-colors cursor-pointer disabled:opacity-50 flex-1 sm:flex-initial"
+            title="Custom Username"
+            className="h-12 px-3.5 bg-[#07050e] border border-purple-500/30 hover:border-purple-500 text-purple-300 text-xs font-mono font-semibold rounded-xl flex items-center justify-center gap-1.5 transition disabled:opacity-50 flex-1 sm:flex-initial"
           >
-            <Sparkles className="w-4 h-4 text-indigo-600" />
-            <span className="whitespace-nowrap font-semibold">Custom</span>
+            <Sparkles className="w-4 h-4 text-purple-400" />
+            <span className="whitespace-nowrap">Custom</span>
           </button>
 
-          {/* Domain Dropdown Button */}
+          {/* Domain Picker Dropdown */}
           <div className="relative flex-1 sm:flex-initial" ref={dropdownRef}>
             <button
-              type="button"
-              onClick={() => setIsDomainDropdownOpen((prev) => !prev)}
+              onClick={() => setIsDomainDropdownOpen(!isDomainDropdownOpen)}
               disabled={isGenerating || domains.length === 0}
-              title="Change domain"
-              className="w-full sm:w-auto h-12 px-3.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-sm font-medium rounded-xl flex items-center justify-between sm:justify-center gap-1.5 shadow-xs transition-colors cursor-pointer disabled:opacity-50"
+              className="h-12 px-3.5 bg-[#07050e] border border-purple-500/30 hover:border-purple-500 text-purple-300 text-xs font-mono font-semibold rounded-xl flex items-center justify-between gap-2 transition disabled:opacity-50 w-full sm:w-auto"
             >
-              <div className="flex items-center gap-1.5">
-                <Globe className="w-4 h-4 text-indigo-500" />
-                <span className="font-mono text-xs text-slate-600 truncate max-w-32">
-                  {currentDomain ? `@${currentDomain}` : 'Domain'}
-                </span>
-              </div>
-              <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-150 ${isDomainDropdownOpen ? 'rotate-180' : ''}`} />
+              <Globe className="w-4 h-4 text-purple-400 shrink-0" />
+              <span className="truncate max-w-[120px] font-mono">@{currentDomain || 'domain'}</span>
+              <ChevronDown className={`w-3.5 h-3.5 text-purple-400 transition-transform ${isDomainDropdownOpen ? 'rotate-180' : ''}`} />
             </button>
 
             {isDomainDropdownOpen && (
-              <div className="absolute right-0 top-full mt-1.5 w-56 bg-white rounded-xl shadow-xl border border-slate-200 py-1.5 z-40 animate-in fade-in zoom-in-95 duration-100">
-                <div className="px-3 py-1.5 border-b border-slate-100 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
-                  Select Domain
+              <div className="absolute right-0 top-14 z-50 w-56 bg-[#0f0b1a] border border-purple-500/30 rounded-2xl p-2 shadow-2xl max-h-60 overflow-y-auto">
+                <div className="text-[10px] font-mono text-purple-400/60 uppercase tracking-wider px-3 py-1.5 border-b border-purple-500/20 mb-1">
+                  Pilih Active Domain VIP
                 </div>
-                <div className="max-h-56 overflow-y-auto py-1">
-                  {domains.map((d) => {
-                    const isSelected = d.domain === currentDomain
-                    return (
-                      <button
-                        key={d.id}
-                        type="button"
-                        onClick={() => handleDomainSelect(d.domain)}
-                        className={`w-full text-left px-3 py-2 text-xs flex items-center justify-between transition-colors cursor-pointer ${
-                          isSelected
-                            ? 'bg-indigo-50/80 text-indigo-700 font-semibold'
-                            : 'text-slate-700 hover:bg-slate-50'
-                        }`}
-                      >
-                        <span className="font-mono truncate">@{d.domain}</span>
-                        {isSelected && <Check className="w-3.5 h-3.5 text-indigo-600 shrink-0" />}
-                      </button>
-                    )
-                  })}
-                </div>
+                {domains.map((d) => (
+                  <button
+                    key={d.domain}
+                    onClick={() => handleDomainSelect(d.domain)}
+                    className={`w-full text-left px-3 py-2 rounded-xl text-xs font-mono transition flex items-center justify-between ${
+                      d.domain === currentDomain
+                        ? 'bg-purple-500/20 text-purple-200 border border-purple-500/30 font-bold'
+                        : 'text-purple-300/80 hover:bg-purple-950/40 hover:text-white'
+                    }`}
+                  >
+                    <span>@{d.domain}</span>
+                    {d.domain === currentDomain && <Check className="w-3.5 h-3.5 text-purple-400" />}
+                  </button>
+                ))}
               </div>
             )}
           </div>
@@ -205,14 +197,13 @@ export const EmailHero: React.FC<EmailHeroProps> = ({
           <button
             onClick={onDeleteMailbox}
             disabled={isGenerating}
-            title="Delete current mailbox & create fresh one"
-            className="h-12 px-3 bg-white border border-slate-200 hover:border-rose-200 hover:bg-rose-50 text-slate-400 hover:text-rose-600 text-sm font-medium rounded-xl flex items-center justify-center gap-1.5 shadow-xs transition-colors cursor-pointer disabled:opacity-50"
+            title="Hapus Inbox"
+            className="h-12 px-3 bg-rose-950/40 border border-rose-800/40 hover:bg-rose-900/60 text-rose-300 text-xs rounded-xl flex items-center justify-center transition disabled:opacity-50"
           >
             <Trash2 className="w-4 h-4" />
-            <span className="sr-only">Delete Mailbox</span>
           </button>
         </div>
       </div>
-    </div>
+    </SpotlightCard>
   )
 }
