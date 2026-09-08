@@ -12,7 +12,7 @@ import {
 import { playDingSound } from '../utils/sound'
 
 const STORAGE_KEY = 'tmail_session_v1'
-const POLLING_INTERVAL_SEC = 3
+const POLLING_INTERVAL_SEC = 2
 
 export interface LogItem {
   id: string
@@ -239,7 +239,18 @@ export function useMailbox() {
       })
     }, 1000)
 
-    return () => clearInterval(tick)
+    const onFocus = () => {
+      fetchInbox(true)
+      setCountdown(POLLING_INTERVAL_SEC)
+    }
+    window.addEventListener('focus', onFocus)
+    document.addEventListener('visibilitychange', onFocus)
+
+    return () => {
+      clearInterval(tick)
+      window.removeEventListener('focus', onFocus)
+      document.removeEventListener('visibilitychange', onFocus)
+    }
   }, [account?.token, fetchInbox])
 
   const removeMessage = useCallback(async (id: string) => {

@@ -88,10 +88,16 @@ export async function getToken(_address: string, _password?: string): Promise<st
   return 'local-session-token'
 }
 
-// Fetch inbox dari Cloudflare Worker KV
+// Fetch inbox dari Cloudflare Worker KV (dengan anti-cache query & no-store header)
 export async function getMessages(_token: string, address?: string): Promise<MessageItem[]> {
   if (!address) return []
-  const res = await fetch(`/api/messages?address=${encodeURIComponent(address)}`)
+  const res = await fetch(`/api/messages?address=${encodeURIComponent(address)}&_t=${Date.now()}`, {
+    cache: 'no-store',
+    headers: {
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+    },
+  })
   if (!res.ok) {
     throw new Error('Gagal memuat pesan')
   }
@@ -101,8 +107,14 @@ export async function getMessages(_token: string, address?: string): Promise<Mes
 
 // Fetch detail pesan dari Cloudflare Worker KV
 export async function getMessageDetail(_token: string, messageId: string, address?: string): Promise<MessageDetail> {
-  const query = address ? `?address=${encodeURIComponent(address)}` : ''
-  const res = await fetch(`/api/messages/${messageId}${query}`)
+  const query = address ? `?address=${encodeURIComponent(address)}&_t=${Date.now()}` : `?_t=${Date.now()}`
+  const res = await fetch(`/api/messages/${messageId}${query}`, {
+    cache: 'no-store',
+    headers: {
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+    },
+  })
   if (!res.ok) throw new Error('Gagal memuat detail email')
   return res.json()
 }
