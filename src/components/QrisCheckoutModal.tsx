@@ -131,6 +131,13 @@ export const QrisCheckoutModal: React.FC<QrisCheckoutModalProps> = ({
                     Scan QR di atas atau klik tombol Halaman Checkout di atas.
                   </p>
                 </div>
+
+                <button
+                  onClick={onClose}
+                  className="w-full py-2.5 px-4 rounded-xl bg-rose-950/40 hover:bg-rose-900/60 border border-rose-800/40 text-rose-300 text-xs font-mono font-bold transition cursor-pointer"
+                >
+                  Batal / Batalkan Transaksi
+                </button>
               </div>
             </div>
           ) : (
