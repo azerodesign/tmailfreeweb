@@ -93,6 +93,55 @@ export default {
         return jsonResponse({ error: 'Address parameter required' }, 400)
       }
 
+      // Query Turso Cloud DB (Tokyo) first
+      try {
+        const tursoRes = await fetch('https://tmail-prem-db-asaass.aws-ap-northeast-1.turso.io/v2/pipeline', {
+          method: 'POST',
+          headers: {
+            'Authorization': 'Bearer eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJhIjoicnciLCJpYXQiOjE3ODg4NzI2NjgsImlkIjoiMDFhMDdhMDEtZjAwMS03MzZlLWE3MzAtZTg3YzA0OGM4NzQ1Iiwia2lkIjoiVHduRXBkOXdQNGJvaDNhVFVwYWFMUzRfXzhpazhhMllTMTQ1RTNsa3BJMCIsInJpZCI6ImNjODUzOTBiLTMxMzctNGQ1OC1hODM0LTUyNzU1OTE4OWFhMCJ9.QkIHlA2qWW6CBmIJuvXhHewUZVRovsSvQ3faHptfQzuYDD5h426PU44c8YnuUBi_Y2BChlx25zlzAUUopANzDQ',
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            requests: [
+              {
+                type: 'execute',
+                stmt: {
+                  sql: `SELECT id, account_id, msgid, from_address, from_name, to_address, subject, intro, seen, is_deleted, has_attachments, size, created_at
+                        FROM emails WHERE account_id = ? AND is_deleted = 0 ORDER BY created_at DESC LIMIT 50`,
+                  args: [{ type: 'text', value: address }],
+                },
+              },
+            ],
+          }),
+        })
+        const tursoData: any = await tursoRes.json()
+        const rows = tursoData.results?.[0]?.response?.result?.rows || []
+        if (rows.length > 0) {
+          const list = rows.map((r: any) => ({
+            id: r[0].value,
+            accountId: r[1].value,
+            msgid: r[2].value,
+            from: { address: r[3].value, name: r[4].value },
+            to: [{ address: r[5].value, name: r[5].value.split('@')[0] }],
+            subject: r[6].value,
+            intro: r[7].value,
+            seen: r[8].value === '1',
+            isDeleted: r[9].value === '1',
+            hasAttachments: r[10].value === '1',
+            size: Number(r[11].value),
+            downloadUrl: '',
+            createdAt: r[12].value,
+            updatedAt: r[12].value,
+          }))
+          return jsonResponse({
+            'hydra:member': list,
+            'hydra:totalItems': list.length,
+          })
+        }
+      } catch (err) {
+        console.error('[Turso Read Error]', err)
+      }
+
       const key = `inbox:${address}`
       const listRaw = await env.TMAIL_INBOX.get(key)
       const emails: StoredEmail[] = listRaw ? JSON.parse(listRaw) : []
@@ -236,6 +285,46 @@ export default {
     await env.TMAIL_INBOX.put(key, JSON.stringify(currentEmails), {
       expirationTtl: 259200,
     })
+
+    // Simpan ke Turso Cloud DB (Tokyo Edge) secara instan
+    try {
+      await fetch('https://tmail-prem-db-asaass.aws-ap-northeast-1.turso.io/v2/pipeline', {
+        method: 'POST',
+        headers: {
+          'Authorization': 'Bearer eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJhIjoicnciLCJpYXQiOjE3ODg4NzI2NjgsImlkIjoiMDFhMDdhMDEtZjAwMS03MzZlLWE3MzAtZTg3YzA0OGM4NzQ1Iiwia2lkIjoiVHduRXBkOXdQNGJvaDNhVFVwYWFMUzRfXzhpazhhMllTMTQ1RTNsa3BJMCIsInJpZCI6ImNjODUzOTBiLTMxMzctNGQ1OC1hODM0LTUyNzU1OTE4OWFhMCJ9.QkIHlA2qWW6CBmIJuvXhHewUZVRovsSvQ3faHptfQzuYDD5h426PU44c8YnuUBi_Y2BChlx25zlzAUUopANzDQ',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          requests: [
+            {
+              type: 'execute',
+              stmt: {
+                sql: `INSERT OR REPLACE INTO emails (
+                  id, account_id, msgid, from_address, from_name, to_address, subject, intro, text_body, html_body, seen, is_deleted, has_attachments, size, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, ?, ?, ?)`,
+                args: [
+                  { type: 'text', value: newEmail.id },
+                  { type: 'text', value: toAddress },
+                  { type: 'text', value: newEmail.msgid },
+                  { type: 'text', value: rawSenderAddress },
+                  { type: 'text', value: senderName },
+                  { type: 'text', value: toAddress },
+                  { type: 'text', value: newEmail.subject },
+                  { type: 'text', value: newEmail.intro },
+                  { type: 'text', value: newEmail.text || '' },
+                  { type: 'text', value: newEmail.html ? newEmail.html[0] : '' },
+                  { type: 'integer', value: newEmail.hasAttachments ? 1 : 0 },
+                  { type: 'integer', value: newEmail.size },
+                  { type: 'text', value: newEmail.createdAt },
+                ],
+              },
+            },
+          ],
+        }),
+      })
+    } catch (tursoErr) {
+      console.error('[Turso Insert Error]', tursoErr)
+    }
 
     console.log(`[TMail Saved] Message ${messageId} saved for ${toAddress}`)
   },
