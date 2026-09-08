@@ -66,6 +66,12 @@ export const Header: React.FC<HeaderProps> = ({ isPolling }) => {
 
         <div className="flex items-center gap-2">
           <a
+            href="/benefit"
+            className={`text-[11px] font-mono ${theme.textMuted} hover:text-white bg-[#07050e] border ${theme.borderStyle} ${theme.btnStyle} px-3 py-1.5 rounded-xl transition flex items-center gap-1`}
+          >
+            Benefit
+          </a>
+          <a
             href="/apikey"
             className={`text-[11px] font-mono ${theme.textMuted} hover:text-white bg-[#07050e] border ${theme.borderStyle} ${theme.btnStyle} px-3 py-1.5 rounded-xl transition flex items-center gap-1`}
           >

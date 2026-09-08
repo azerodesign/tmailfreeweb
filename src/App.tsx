@@ -8,6 +8,7 @@ import { RedeemGate } from './components/RedeemGate'
 import { AdminPanel } from './pages/AdminPanel'
 import { ApiKeyPanel } from './pages/ApiKeyPanel'
 import { LogsPanel } from './pages/LogsPanel'
+import { BenefitPanel } from './pages/BenefitPanel'
 import { useMailbox } from './hooks/useMailbox'
 import type { MessageItem } from './services/mailApi'
 import { AlertCircle, CheckCircle2 } from 'lucide-react'
@@ -19,6 +20,7 @@ export function App() {
   const isAdminRoute = currentPath.startsWith('/admin')
   const isApiKeyRoute = currentPath.startsWith('/apikey')
   const isLogsRoute = currentPath.startsWith('/logs')
+  const isBenefitRoute = currentPath.startsWith('/benefit')
 
   // Auto-redirect root `/` to `/inbox` for consistent SPA routing
   if (window.location.pathname === '/') {
@@ -68,6 +70,10 @@ export function App() {
 
   if (isLogsRoute) {
     return <LogsPanel logs={logs} />
+  }
+
+  if (isBenefitRoute) {
+    return <BenefitPanel />
   }
 
   return (
