@@ -1,13 +1,13 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
   <defs>
     <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#022c22"/>
-      <stop offset="50%" stop-color="#059669"/>
-      <stop offset="100%" stop-color="#10b981"/>
+      <stop offset="0%" stop-color="#07050e"/>
+      <stop offset="50%" stop-color="#2e1065"/>
+      <stop offset="100%" stop-color="#6b21a8"/>
     </linearGradient>
     <linearGradient id="mail" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#ffffff"/>
-      <stop offset="100%" stop-color="#a7f3d0"/>
+      <stop offset="100%" stop-color="#e9d5ff"/>
     </linearGradient>
     <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
       <feGaussianBlur stdDeviation="16" result="blur"/>
@@ -19,14 +19,14 @@
   <rect width="512" height="512" rx="128" fill="url(#bg)"/>
   
   <!-- Outer Glow Circle -->
-  <circle cx="256" cy="256" r="180" fill="none" stroke="#34d399" stroke-width="12" opacity="0.4" filter="url(#glow)"/>
+  <circle cx="256" cy="256" r="180" fill="none" stroke="#a855f7" stroke-width="12" opacity="0.4" filter="url(#glow)"/>
 
   <!-- Mail Icon Base -->
-  <path d="M112 160 C112 142.3 126.3 128 144 128 L368 128 C385.7 128 400 142.3 400 160 L400 352 C400 369.7 385.7 384 368 384 L144 384 C126.3 384 112 369.7 112 352 Z" fill="#021c16" stroke="url(#mail)" stroke-width="24" stroke-linejoin="round"/>
+  <path d="M112 160 C112 142.3 126.3 128 144 128 L368 128 C385.7 128 400 142.3 400 160 L400 352 C400 369.7 385.7 384 368 384 L144 384 C126.3 384 112 369.7 112 352 Z" fill="#0f0b1a" stroke="url(#mail)" stroke-width="24" stroke-linejoin="round"/>
   
   <!-- Envelope Flap -->
   <path d="M120 152 L243.6 261.4 C250.7 267.7 261.3 267.7 268.4 261.4 L392 152" fill="none" stroke="url(#mail)" stroke-width="24" stroke-linecap="round" stroke-linejoin="round"/>
 
   <!-- Lightning Bolt Badge -->
-  <path d="M336 240 L288 320 L312 320 L272 416 L352 304 L320 304 Z" fill="#34d399" filter="url(#glow)"/>
+  <path d="M336 240 L288 320 L312 320 L272 416 L352 304 L320 304 Z" fill="#c084fc" filter="url(#glow)"/>
 </svg>
