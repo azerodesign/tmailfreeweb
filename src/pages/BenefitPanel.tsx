@@ -85,7 +85,7 @@ const TIERS_DETAIL = [
       { label: 'Fitur Auto Rotate Domain', val: 'Aktif (Auto Switch)' },
       { label: 'Chrome Extension TMail', val: 'Akses Penuh Extension' },
       { label: 'Domain Slot Pribadi', val: '20 Custom Domain .my.id, .com, & Lainnya' },
-      { label: 'Exclusive Membership', val: 'FREE Akses Membership Method Aztors' },
+      { label: 'Exclusive Membership', val: 'Diskon Spesial Membership Method Aztors' },
       { label: 'Akses Fitur Terbaru', val: 'Update Prioritas Awal' },
     ],
   },
