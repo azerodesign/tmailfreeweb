@@ -12,11 +12,18 @@ interface MessageModalProps {
   onDelete: (id: string) => Promise<void>
 }
 
-// Extract 4 to 8 digit OTP codes from subject or email body
+// Detect OTP reliably: prioritize explicit OTP/code labels, then 6-digit standalone codes.
 function extractOtpCode(text: string, subject: string): string | null {
   const fullText = `${subject} ${text}`
-  const match = fullText.match(/\b(\d{4,8})\b/)
-  return match ? match[1] : null
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/&nbsp;/gi, ' ')
+  const labeled = fullText.match(
+    /(?:otp|one[- ]time password|verification(?: code)?|security code|access code|passcode|kode)\D{0,40}(\d{4,8})\b/i,
+  )
+  if (labeled?.[1]) return labeled[1]
+
+  const candidates = [...fullText.matchAll(/(?<![\w-])\d{4,8}(?![\w-])/g)].map((m) => m[0])
+  return candidates.find((code) => code.length === 6) || candidates[0] || null
 }
 
 export const MessageModal: React.FC<MessageModalProps> = ({
