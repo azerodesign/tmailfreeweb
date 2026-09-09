@@ -1,4 +1,5 @@
 import { saveVoucherRemote } from './voucherService'
+import { getOrCreateApiKey } from '../utils/apiKey'
 
 export interface CreateOrderParams {
   planId: string
@@ -73,7 +74,7 @@ export async function mintVoucherOnPaymentSuccess(planId: string, days: number) 
     plan: planId,
     days,
     createdAt: new Date().toLocaleDateString('id-ID', { hour: '2-digit', minute: '2-digit' }),
-    apiKey: `TML-VIP-${code}`,
+    apiKey: getOrCreateApiKey(code),
   }
   await saveVoucherRemote(newVoucher)
   return newVoucher

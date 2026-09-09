@@ -69,7 +69,7 @@ export function App() {
 
   // 3. Protected Routes after Login
   if (isApiKeyRoute) {
-    return <ApiKeyPanel token={account?.token || null} createdCount={createdCount} />
+    return <ApiKeyPanel token={redeemToken} createdCount={createdCount} />
   }
 
   if (isLogsRoute) {

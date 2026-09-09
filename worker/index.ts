@@ -4,6 +4,8 @@ interface Env {
   ASSETS: Fetcher
   TMAIL_INBOX: KVNamespace
   DOMAINS?: string
+  TURSO_URL?: string
+  TURSO_TOKEN?: string
 }
 
 interface ForwardableEmailMessage {
@@ -161,10 +163,61 @@ export default {
 
     // 3. GET /api/messages/:id?address=user@domain.com
     if (url.pathname.startsWith('/api/messages/') && request.method === 'GET') {
-      const messageId = url.pathname.replace('/api/messages/', '')
+      let messageId = url.pathname.replace('/api/messages/', '')
+      try {
+        messageId = decodeURIComponent(messageId)
+      } catch {}
       const address = url.searchParams.get('address')?.toLowerCase().trim()
       if (!address) {
         return jsonResponse({ error: 'Address parameter required' }, 400)
+      }
+
+      // Check Turso DB first
+      try {
+        const tursoRes = await fetch('https://tmail-prem-db-asaass.aws-ap-northeast-1.turso.io/v2/pipeline', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${env.TURSO_TOKEN}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            requests: [
+              {
+                type: 'execute',
+                stmt: {
+                  sql: `SELECT id, account_id, msgid, from_address, from_name, to_address, subject, intro, text_body, html_body, seen, is_deleted, has_attachments, size, created_at
+                        FROM emails WHERE id = ? LIMIT 1`,
+                  args: [{ type: 'text', value: messageId }],
+                },
+              },
+            ],
+          }),
+        })
+        const tursoData: any = await tursoRes.json()
+        const rows = tursoData.results?.[0]?.response?.result?.rows || []
+        if (rows.length > 0) {
+          const r = rows[0]
+          return jsonResponse({
+            id: r[0].value,
+            accountId: r[1].value,
+            msgid: r[2].value,
+            from: { address: r[3].value, name: r[4].value },
+            to: [{ address: r[5].value, name: r[5].value.split('@')[0] }],
+            subject: r[6].value,
+            intro: r[7].value,
+            seen: r[10].value === '1',
+            isDeleted: r[11].value === '1',
+            hasAttachments: r[12].value === '1',
+            size: Number(r[13].value),
+            downloadUrl: '',
+            createdAt: r[14].value,
+            updatedAt: r[14].value,
+            text: r[8]?.value || '',
+            html: r[9]?.value ? [r[9].value] : undefined,
+          })
+        }
+      } catch (err) {
+        console.error('[Turso Read Single Error]', err)
       }
 
       const key = `inbox:${address}`
@@ -189,10 +242,37 @@ export default {
 
     // 4. DELETE /api/messages/:id?address=user@domain.com
     if (url.pathname.startsWith('/api/messages/') && request.method === 'DELETE') {
-      const messageId = url.pathname.replace('/api/messages/', '')
+      let messageId = url.pathname.replace('/api/messages/', '')
+      try {
+        messageId = decodeURIComponent(messageId)
+      } catch {}
       const address = url.searchParams.get('address')?.toLowerCase().trim()
       if (!address) {
         return jsonResponse({ error: 'Address parameter required' }, 400)
+      }
+
+      // Mark as deleted in Turso DB
+      try {
+        await fetch('https://tmail-prem-db-asaass.aws-ap-northeast-1.turso.io/v2/pipeline', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${env.TURSO_TOKEN}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            requests: [
+              {
+                type: 'execute',
+                stmt: {
+                  sql: `UPDATE emails SET is_deleted = 1 WHERE id = ?`,
+                  args: [{ type: 'text', value: messageId }],
+                },
+              },
+            ],
+          }),
+        })
+      } catch (err) {
+        console.error('[Turso Delete Error]', err)
       }
 
       const key = `inbox:${address}`
@@ -291,7 +371,7 @@ export default {
       await fetch('https://tmail-prem-db-asaass.aws-ap-northeast-1.turso.io/v2/pipeline', {
         method: 'POST',
         headers: {
-          'Authorization': 'Bearer eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJhIjoicnciLCJpYXQiOjE3ODg4NzI2NjgsImlkIjoiMDFhMDdhMDEtZjAwMS03MzZlLWE3MzAtZTg3YzA0OGM4NzQ1Iiwia2lkIjoiVHduRXBkOXdQNGJvaDNhVFVwYWFMUzRfXzhpazhhMllTMTQ1RTNsa3BJMCIsInJpZCI6ImNjODUzOTBiLTMxMzctNGQ1OC1hODM0LTUyNzU1OTE4OWFhMCJ9.QkIHlA2qWW6CBmIJuvXhHewUZVRovsSvQ3faHptfQzuYDD5h426PU44c8YnuUBi_Y2BChlx25zlzAUUopANzDQ',
+          'Authorization': `Bearer ${env.TURSO_TOKEN}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
@@ -312,9 +392,9 @@ export default {
                   { type: 'text', value: newEmail.subject },
                   { type: 'text', value: newEmail.intro },
                   { type: 'text', value: newEmail.text || '' },
-                  { type: 'text', value: newEmail.html ? newEmail.html[0] : '' },
-                  { type: 'integer', value: newEmail.hasAttachments ? 1 : 0 },
-                  { type: 'integer', value: newEmail.size },
+                  { type: 'text', value: newEmail.html ? newEmail.html.join('') : '' },
+                  { type: 'integer', value: newEmail.hasAttachments ? '1' : '0' },
+                  { type: 'integer', value: String(newEmail.size || 0) },
                   { type: 'text', value: newEmail.createdAt },
                 ],
               },

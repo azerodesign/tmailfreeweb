@@ -1,15 +1,22 @@
 name = "tmail-free"
 main = "worker/index.ts"
-compatibility_date = "2024-09-01"
+compatibility_date = "2025-06-01"
+account_id = "b587f4fcf728ee6562e7600265323395"
 
-[assets]
-directory = "./dist"
-not_found_handling = "single-page-application"
-binding = "ASSETS"
+[vars]
+DOMAINS = "amailang.my.id,mailian.my.id,otpinn.my.id,tempol.my.id,gaskenn.biz.id"
+TURSO_URL = "libsql://tmail-prem-db-asaass.aws-ap-northeast-1.turso.io"
 
 [[kv_namespaces]]
 binding = "TMAIL_INBOX"
 id = "4e97f90248214ed087c0a3b43b40ee0c"
 
-[vars]
-DOMAINS = "amailang.my.id,mailian.my.id,otpinn.my.id,tempol.my.id,gaskenn.biz.id"
+[[d1_databases]]
+binding = "DB"
+database_name = "tmail-db"
+database_id = "d3dccd51-b622-46ba-9fff-1fe829daa6d6"
+
+[assets]
+directory = "./dist"
+not_found_handling = "single-page-application"
+binding = "ASSETS"

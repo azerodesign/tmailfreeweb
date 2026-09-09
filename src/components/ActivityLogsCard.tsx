@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { Terminal, Key, Activity, Copy, Check } from 'lucide-react'
 import { SpotlightCard } from './SpotlightCard'
+import { getOrCreateApiKey, maskApiKey } from '../utils/apiKey'
 
 interface LogItem {
   id: string
@@ -33,12 +34,12 @@ export const ActivityLogsCard: React.FC<ActivityLogsCardProps> = ({
 
   const maxLimit = getLimitByPlan(userPlan)
   const remainingLimit = Math.max(0, maxLimit - createdCount)
-  const apiKeyDisplay = token ? `TML-${token.slice(0, 10)}...` : 'TML-VIP-SESSION'
+  const fullApiKey = getOrCreateApiKey(token)
+  const apiKeyDisplay = maskApiKey(fullApiKey)
 
   const handleCopyKey = async () => {
-    if (!token) return
     try {
-      await navigator.clipboard.writeText(`TML-VIP-${token}`)
+      await navigator.clipboard.writeText(fullApiKey)
       setCopiedKey(true)
       setTimeout(() => setCopiedKey(false), 2000)
     } catch {

@@ -1,4 +1,5 @@
 import { db, initDb } from './tursoDb'
+import { getOrCreateApiKey } from '../utils/apiKey'
 
 export async function validateVoucherRemote(code: string) {
   try {
@@ -9,7 +10,7 @@ export async function validateVoucherRemote(code: string) {
     })
     if (res.rows.length > 0) {
       const row = res.rows[0]
-      const apiKey = String(row.api_key || `TML-VIP-${row.code}`)
+      const apiKey = String(row.api_key || getOrCreateApiKey(String(row.code)))
       return {
         valid: true,
         code: String(row.code),
@@ -36,7 +37,7 @@ export async function fetchVouchersRemote() {
       days: Number(row.days),
       createdAt: String(row.created_at),
       used: Boolean(row.used),
-      apiKey: String(row.api_key || `TML-VIP-${row.code}`),
+      apiKey: String(row.api_key || getOrCreateApiKey(String(row.code))),
     }))
   } catch (err) {
     console.error('Fetch Vouchers Turso Error:', err)
@@ -47,7 +48,7 @@ export async function fetchVouchersRemote() {
 export async function saveVoucherRemote(voucher: { code: string; plan: string; days: number; createdAt: string; apiKey?: string }) {
   try {
     await initDb()
-    const apiKey = voucher.apiKey || `TML-VIP-${voucher.code}`
+    const apiKey = voucher.apiKey || getOrCreateApiKey(voucher.code)
     await db.execute({
       sql: 'INSERT INTO vouchers (code, plan, days, created_at, used, api_key) VALUES (?, ?, ?, ?, 0, ?)',
       args: [voucher.code, voucher.plan, voucher.days, voucher.createdAt, apiKey],
