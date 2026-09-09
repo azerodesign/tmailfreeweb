@@ -38,38 +38,43 @@ export const MessageList: React.FC<MessageListProps> = ({
       className={`${theme.bgBox} backdrop-blur-xl rounded-3xl border ${theme.borderStyle} shadow-2xl overflow-hidden p-0`}
       spotlightColor={theme.spotlightColor}
     >
-      <div className={`p-5 sm:px-6 border-b ${theme.borderStyle} flex items-center justify-between`}>
-        <div className="flex items-center gap-2">
-          <Inbox className={`w-4 h-4 ${theme.textPrimary}`} />
-          <h3 className="font-bold text-white text-sm tracking-tight">VIP Mailbox Messages</h3>
-          <span className={`text-xs ${theme.badgeStyle} font-mono font-bold px-2 py-0.5 rounded-full border`}>
-            {messages.length}
-          </span>
+      <div className={`flex items-center justify-between gap-3 border-b ${theme.borderStyle} p-4 sm:px-6 sm:py-5`}>
+        <div className="flex min-w-0 items-center gap-2.5">
+          <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl ${theme.badgeStyle} border`}>
+            <Inbox className={`h-4 w-4 ${theme.textPrimary}`} />
+          </div>
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <h3 className="truncate text-sm font-bold tracking-tight text-white">Inbox</h3>
+              <span className={`rounded-full border px-2 py-0.5 text-[10px] font-bold ${theme.badgeStyle} font-mono`}>
+                {messages.length}
+              </span>
+            </div>
+            <p className={`mt-0.5 truncate text-[10px] ${theme.textMuted} font-mono`}>Pesan masuk terbaru</p>
+          </div>
         </div>
 
         {isLoading && (
-          <div className={`flex items-center gap-1.5 text-xs font-mono ${theme.textPrimary}`}>
-            <Loader2 className="w-3.5 h-3.5 animate-spin" />
-            <span>Memeriksa pesan...</span>
+          <div className={`flex shrink-0 items-center gap-1.5 text-[10px] font-mono ${theme.textPrimary}`}>
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            <span className="hidden sm:inline">Memeriksa pesan</span>
           </div>
         )}
       </div>
 
       {messages.length === 0 ? (
-        <div className="py-20 px-4 text-center flex flex-col items-center justify-center">
-          <div className="relative mb-4">
-            <div className={`w-14 h-14 rounded-2xl bg-[#07050e] border ${theme.borderStyle} flex items-center justify-center ${theme.textPrimary} shadow-inner`}>
-              <Inbox className="w-6 h-6" />
-            </div>
-            <div className="absolute -top-1 -right-1 flex h-3 w-3">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
-            </div>
+        <div className="flex min-h-[21rem] flex-col items-center justify-center px-6 py-16 text-center">
+          <div className={`mb-5 flex h-16 w-16 items-center justify-center rounded-2xl border ${theme.borderStyle} bg-[#07050e] ${theme.textPrimary} shadow-inner`}>
+            <Inbox className="h-7 w-7" />
           </div>
-          <p className="text-sm font-bold text-white">Menunggu Pesan Masuk</p>
-          <p className={`text-xs ${theme.textMuted} max-w-xs mt-1 font-mono`}>
-            Email yang dikirim ke alamat VIP kamu akan otomatis muncul di sini dalam beberapa detik.
+          <p className="text-sm font-bold text-white">Inbox siap menerima pesan</p>
+          <p className={`mt-2 max-w-sm text-xs leading-5 ${theme.textMuted}`}>
+            Kode OTP dan email baru akan muncul otomatis. Tidak perlu refresh manual.
           </p>
+          <div className={`mt-5 flex items-center gap-2 rounded-full border ${theme.borderStyle} bg-[#07050e]/70 px-3 py-1.5 text-[10px] ${theme.textMuted} font-mono`}>
+            <span className={`h-1.5 w-1.5 animate-pulse rounded-full bg-current ${theme.textPrimary}`} />
+            Auto-refresh aktif
+          </div>
         </div>
       ) : (
         <div className={`divide-y ${theme.borderStyle}`}>
@@ -79,7 +84,7 @@ export const MessageList: React.FC<MessageListProps> = ({
               <div
                 key={msg.id}
                 onClick={() => onSelectMessage(msg)}
-                className="p-4 sm:px-6 flex items-center justify-between gap-4 hover:bg-emerald-950/30 cursor-pointer transition-colors group"
+                className={`group flex cursor-pointer items-center justify-between gap-3 border-l-2 border-transparent p-4 transition-colors hover:border-current hover:bg-white/[0.035] sm:px-6 ${!msg.seen ? 'bg-white/[0.018]' : ''}`}
               >
                 <div className="flex items-center gap-3.5 min-w-0 flex-1">
                   <div className={`w-9 h-9 rounded-xl ${theme.badgeStyle} border flex items-center justify-center shrink-0 transition-colors font-bold text-xs uppercase`}>
@@ -91,7 +96,9 @@ export const MessageList: React.FC<MessageListProps> = ({
                         {sender.name}
                       </span>
                       {!msg.seen && (
-                        <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0 animate-pulse" />
+                        <span className={`shrink-0 rounded-full border px-1.5 py-0.5 text-[9px] font-bold ${theme.badgeStyle}`}>
+                          BARU
+                        </span>
                       )}
                     </div>
                     <p className="text-xs sm:text-sm text-slate-200 truncate font-medium">

@@ -28,6 +28,7 @@ export function App() {
   }
 
   const [redeemToken, setRedeemToken] = useState<string | null>(() => localStorage.getItem('tmail_prem_redeem_token'))
+  const theme = useThemeConfig()
 
   const {
     account,
@@ -65,8 +66,6 @@ export function App() {
     return <RedeemGate onRedeemSuccess={(token) => setRedeemToken(token)} />
   }
 
-  const theme = useThemeConfig()
-
   // 3. Protected Routes after Login
   if (isApiKeyRoute) {
     return <ApiKeyPanel token={redeemToken} createdCount={createdCount} />
@@ -81,7 +80,11 @@ export function App() {
   }
 
   return (
-    <div className={`min-h-screen bg-[#07050e] text-slate-100 flex flex-col justify-between ${theme.selection} selection:text-white relative overflow-hidden font-sans`}>
+    <div className={`tmail-app-shell min-h-screen bg-[#07050e] text-slate-100 flex flex-col justify-between ${theme.selection} selection:text-white relative overflow-hidden font-sans`}>
+      <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[70] focus:rounded-lg focus:bg-white focus:px-3 focus:py-2 focus:text-sm focus:font-semibold focus:text-slate-950">
+        Lewati ke inbox
+      </a>
+
       {/* Dynamic Role-Based Background MoltenMetal Fluid Animation */}
       <MoltenMetal
         color1={theme.color1}
@@ -90,13 +93,15 @@ export function App() {
         speed={0.2}
         scale={3.8}
         glow={1.4}
-        opacity={0.4}
+        opacity={0.24}
         backgroundColor="#07050e"
       />
 
-      <div className="container mx-auto px-4 sm:px-6 max-w-6xl relative z-10 py-4 sm:py-6 flex-1">
+      <div className="container mx-auto w-full max-w-6xl relative z-10 flex-1 px-3 py-3 sm:px-6 sm:py-6">
         {/* Top Navigation Header */}
-        <Header />
+        <Header isPolling={isLoadingMessages} />
+
+        <main id="main-content">
 
         {/* Global Toast Alert */}
         {toastMessage && (
@@ -123,7 +128,7 @@ export function App() {
         )}
 
         {/* Main 2-Column Gmail Dark Tech Layout */}
-        <main className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+        <div className="grid grid-cols-1 items-start gap-4 sm:gap-6 lg:grid-cols-3">
           {/* Left Panel (Mailbox Controls & Quota Meter) */}
           <div className="lg:col-span-1">
             <GmailSidebarControl
@@ -149,6 +154,7 @@ export function App() {
               onSelectMessage={(msg) => setSelectedMessage(msg)}
             />
           </div>
+        </div>
         </main>
       </div>
 

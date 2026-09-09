@@ -97,8 +97,8 @@ export const GmailSidebarControl: React.FC<GmailSidebarControlProps> = ({
           </span>
           <div className={`flex items-center gap-1.5 bg-[#07050e] border ${theme.borderStyle} px-2.5 py-0.5 rounded-full text-[10px] font-mono ${theme.textPrimary}`}>
             <span className="relative flex h-1.5 w-1.5">
-              <span className={`absolute inline-flex h-full w-full rounded-full bg-emerald-400 ${isFetching ? 'animate-ping' : ''}`}></span>
-              <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
+              <span className={`absolute inline-flex h-full w-full rounded-full bg-current ${theme.textPrimary} ${isFetching ? 'animate-ping' : ''}`}></span>
+              <span className={`relative inline-flex h-1.5 w-1.5 rounded-full bg-current ${theme.textPrimary}`}></span>
             </span>
             <span>{countdown}s</span>
           </div>
@@ -167,7 +167,7 @@ export const GmailSidebarControl: React.FC<GmailSidebarControlProps> = ({
                   className={`w-full text-left px-3 py-2 rounded-xl text-xs font-mono transition flex items-center justify-between cursor-pointer ${
                     d.domain === currentDomain
                       ? `${theme.badgeStyle} font-bold`
-                      : `${theme.textMuted} hover:bg-emerald-950/40 hover:text-white`
+                      : `${theme.textMuted} hover:bg-white/[0.04] hover:text-white`
                   }`}
                 >
                   <span className="truncate">@{d.domain}</span>
