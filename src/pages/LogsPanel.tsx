@@ -1,35 +1,59 @@
-import { useState } from 'react'
-import { Terminal, Activity, CheckCircle2, ArrowLeft } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { Terminal, Activity, CheckCircle2, ArrowLeft, Radio } from 'lucide-react'
 import { SpotlightCard } from '../components/SpotlightCard'
 import { MoltenMetal } from '../components/MoltenMetal'
 import { Header } from '../components/Header'
+import { useThemeConfig } from '../hooks/useThemeConfig'
 import type { LogItem } from '../hooks/useMailbox'
 
 interface LogsPanelProps {
   logs: LogItem[]
-  onClearLogs?: () => void
+  lastChecked: Date | null
 }
 
-export function LogsPanel({ logs }: LogsPanelProps) {
+export function LogsPanel({ logs, lastChecked }: LogsPanelProps) {
   const [filter, setFilter] = useState<'ALL' | 'SUCCESS' | 'WARN' | 'INFO'>('ALL')
+  const [isLive, setIsLive] = useState(false)
+  const theme = useThemeConfig()
+
+  useEffect(() => {
+    const updateLiveState = () => {
+      setIsLive(Boolean(lastChecked && Date.now() - lastChecked.getTime() < 7000))
+    }
+    updateLiveState()
+    const timer = window.setInterval(updateLiveState, 1000)
+    return () => window.clearInterval(timer)
+  }, [lastChecked])
 
   const filteredLogs = logs.filter((l) => filter === 'ALL' || l.status === filter)
 
   return (
-    <div className="min-h-screen bg-[#07050e] text-slate-100 p-4 sm:p-8 font-sans selection:bg-purple-500 selection:text-white relative overflow-hidden">
+    <div className={`tmail-app-shell min-h-screen bg-[#07050e] text-slate-100 p-3 sm:p-8 font-sans ${theme.selection} selection:text-white relative overflow-hidden`}>
       <MoltenMetal
-        color1="#2e1065"
-        color2="#6b21a8"
-        color3="#c084fc"
+        color1={theme.color1}
+        color2={theme.color2}
+        color3={theme.color3}
         speed={0.2}
         scale={3.8}
         glow={1.4}
-        opacity={0.35}
+        opacity={0.24}
         backgroundColor="#07050e"
       />
 
-      <div className="max-w-4xl mx-auto space-y-6 relative z-10">
-        <Header />
+      <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6 relative z-10">
+        <Header isPolling={isLive} />
+
+        <div className={`flex items-center justify-between rounded-2xl border ${theme.borderStyle} ${theme.bgBox} px-4 py-3 font-mono`}>
+          <div className="flex items-center gap-2">
+            <Radio className={`h-4 w-4 ${isLive ? 'animate-pulse' : ''} ${isLive ? 'text-emerald-400' : 'text-slate-500'}`} />
+            <span className={`text-[11px] font-bold uppercase tracking-wider ${isLive ? 'text-emerald-300' : 'text-slate-400'}`}>
+              {isLive ? 'LIVE SYNC' : 'MENUNGGU SYNC'}
+            </span>
+          </div>
+          <span className={`text-[10px] ${theme.textMuted}`}>
+            {lastChecked ? `Inbox terakhir: ${lastChecked.toLocaleTimeString('id-ID')}` : 'Belum ada polling inbox'}
+          </span>
+        </div>
 
         <header className="flex flex-col sm:flex-row items-start sm:items-center justify-between border-b border-purple-500/20 pb-5 gap-4">
           <div className="flex items-center gap-3">
@@ -50,14 +74,14 @@ export function LogsPanel({ logs }: LogsPanelProps) {
               <ArrowLeft className="w-4 h-4 text-purple-400" />
               <span>Kembali ke Inbox</span>
             </a>
-            <div className="hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#0f0b1a] border border-purple-500/20 text-xs font-mono text-purple-400">
-              <Activity className="w-3.5 h-3.5 text-purple-400 animate-pulse" />
-              <span>LIVE STREAM</span>
+            <div className={`hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-mono ${isLive ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300' : `border-white/10 ${theme.bgBox} text-slate-400`}`}>
+              <Activity className={`w-3.5 h-3.5 ${isLive ? 'text-emerald-400 animate-pulse' : 'text-slate-500'}`} />
+              <span>{isLive ? 'LIVE STREAM' : 'OFFLINE'}</span>
             </div>
           </div>
         </header>
 
-        <SpotlightCard className="bg-[#0f0b1a]/90 border border-purple-500/20 rounded-3xl p-6 space-y-5 font-mono shadow-2xl" spotlightColor="rgba(168, 85, 247, 0.25)">
+        <SpotlightCard className={`${theme.bgBox} border ${theme.borderStyle} rounded-3xl p-4 sm:p-6 space-y-5 font-mono shadow-2xl`} spotlightColor={theme.spotlightColor}>
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-purple-500/20 pb-4">
             <div className="flex items-center gap-2">
               <Terminal className="w-4 h-4 text-purple-400" />

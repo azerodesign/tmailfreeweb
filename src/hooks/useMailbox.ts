@@ -12,6 +12,7 @@ import {
 import { playDingSound } from '../utils/sound'
 
 const STORAGE_KEY = 'tmail_session_v1'
+const LOGS_STORAGE_KEY = 'tmail_activity_logs_v1'
 const POLLING_INTERVAL_SEC = 2
 
 export interface LogItem {
@@ -23,8 +24,29 @@ export interface LogItem {
 
 const TODAY_KEY = () => `tmail_gen_count_${new Date().toISOString().slice(0, 10)}`
 
+function readStoredLogs(): LogItem[] {
+  try {
+    const raw = localStorage.getItem(LOGS_STORAGE_KEY)
+    if (!raw) return []
+    const parsed: unknown = JSON.parse(raw)
+    if (!Array.isArray(parsed)) return []
+    return parsed
+      .filter((item): item is LogItem => {
+        if (!item || typeof item !== 'object') return false
+        const value = item as Record<string, unknown>
+        return typeof value.id === 'string'
+          && typeof value.timestamp === 'string'
+          && typeof value.event === 'string'
+          && (value.status === 'SUCCESS' || value.status === 'INFO' || value.status === 'WARN')
+      })
+      .slice(0, 50)
+  } catch {
+    return []
+  }
+}
+
 export function useMailbox() {
-  const [logs, setLogs] = useState<LogItem[]>([])
+  const [logs, setLogs] = useState<LogItem[]>(readStoredLogs)
   const [createdCount, setCreatedCount] = useState(() => {
     const saved = localStorage.getItem(TODAY_KEY())
     return saved ? parseInt(saved, 10) : 0
@@ -37,7 +59,12 @@ export function useMailbox() {
       event,
       status,
     }
-    setLogs((prev) => [newLog, ...prev.slice(0, 49)])
+    setLogs((prev) => {
+      const next = [newLog, ...prev].slice(0, 50)
+      localStorage.setItem(LOGS_STORAGE_KEY, JSON.stringify(next))
+      window.dispatchEvent(new CustomEvent('tmail:logs-updated', { detail: next }))
+      return next
+    })
   }, [])
   const [account, setAccount] = useState<MailAccount | null>(() => {
     const raw = localStorage.getItem(STORAGE_KEY)
@@ -79,8 +106,19 @@ export function useMailbox() {
 
   useEffect(() => {
     isMounted.current = true
+    const syncLogs = (event: Event) => {
+      if (event.type === 'storage') {
+        const storageEvent = event as StorageEvent
+        if (storageEvent.key !== LOGS_STORAGE_KEY) return
+      }
+      setLogs(readStoredLogs())
+    }
+    window.addEventListener('storage', syncLogs)
+    window.addEventListener('tmail:logs-updated', syncLogs)
     return () => {
       isMounted.current = false
+      window.removeEventListener('storage', syncLogs)
+      window.removeEventListener('tmail:logs-updated', syncLogs)
     }
   }, [])
 

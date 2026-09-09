@@ -72,7 +72,7 @@ export function App() {
   }
 
   if (isLogsRoute) {
-    return <LogsPanel logs={logs} />
+    return <LogsPanel logs={logs} lastChecked={lastChecked} />
   }
 
   if (isBenefitRoute) {
